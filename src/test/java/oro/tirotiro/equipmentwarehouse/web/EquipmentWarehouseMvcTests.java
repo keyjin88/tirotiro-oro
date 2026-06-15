@@ -1,5 +1,6 @@
 package oro.tirotiro.equipmentwarehouse.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -27,9 +28,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockHttpSession;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
 import oro.tirotiro.equipmentwarehouse.auth.SecurityConfig;
@@ -64,6 +67,9 @@ class EquipmentWarehouseMvcTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @MockitoBean
     private InventoryService inventoryService;
@@ -106,6 +112,37 @@ class EquipmentWarehouseMvcTests {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Sign in")));
+    }
+
+    @Test
+    void formLoginSuccessRedirectsToEquipment() throws Exception {
+        givenLoginUser();
+
+        mockMvc.perform(post("/login")
+                .with(csrf())
+                .param("username", "operator@example.com")
+                .param("password", "password"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/equipment"));
+    }
+
+    @Test
+    void formLoginSuccessIgnoresErrorSavedRequest() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(get("/error"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn()
+                .getRequest()
+                .getSession(false);
+        assertThat(session).isNotNull();
+        givenLoginUser();
+
+        mockMvc.perform(post("/login")
+                .session(session)
+                .with(csrf())
+                .param("username", "operator@example.com")
+                .param("password", "password"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/equipment"));
     }
 
     @Test
@@ -235,6 +272,15 @@ class EquipmentWarehouseMvcTests {
         User user = new User("actor@example.com", "hash", "Actor");
         ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
         return user;
+    }
+
+    private void givenLoginUser() {
+        when(userDetailsService.loadUserByUsername("operator@example.com"))
+                .thenReturn(org.springframework.security.core.userdetails.User
+                        .withUsername("operator@example.com")
+                        .password(passwordEncoder.encode("password"))
+                        .roles("USER")
+                        .build());
     }
 
     @TestConfiguration

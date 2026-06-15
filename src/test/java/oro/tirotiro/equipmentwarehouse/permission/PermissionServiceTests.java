@@ -20,7 +20,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import oro.tirotiro.equipmentwarehouse.audit.AuditService;
-import oro.tirotiro.equipmentwarehouse.auth.persistence.Role;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleCode;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
@@ -49,8 +48,8 @@ class PermissionServiceTests {
     @Test
     void adminsHaveAllPermissionsWithoutExplicitGrant() {
         User admin = user("admin@example.com");
-        admin.getRoles().add(role(RoleCode.ADMIN));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(userRepository.existsByIdAndRoleCode(admin.getId(), RoleCode.ADMIN)).thenReturn(true);
 
         assertThat(permissionService.hasPermission(admin.getId(), PermissionCode.EQUIPMENT_CREATE)).isTrue();
 
@@ -62,10 +61,24 @@ class PermissionServiceTests {
     void requireEquipmentCreateRejectsUserWithoutGrant() {
         User user = user("user@example.com");
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(userRepository.existsByIdAndRoleCode(user.getId(), RoleCode.ADMIN)).thenReturn(false);
 
         assertThatThrownBy(() -> permissionService.requireEquipmentCreate(user))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("EQUIPMENT_CREATE");
+    }
+
+    @Test
+    void isAdminQueriesByUserIdInsteadOfReadingLazyRoles() {
+        UUID userId = UUID.randomUUID();
+        User user = mock(User.class);
+        when(user.getId()).thenReturn(userId);
+        when(userRepository.existsByIdAndRoleCode(userId, RoleCode.ADMIN)).thenReturn(true);
+
+        assertThat(permissionService.isAdmin(user)).isTrue();
+
+        verify(userRepository).existsByIdAndRoleCode(userId, RoleCode.ADMIN);
+        verify(user, never()).getRoles();
     }
 
     @Test
@@ -91,12 +104,6 @@ class PermissionServiceTests {
         User user = new User(email, "hash", email);
         ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
         return user;
-    }
-
-    private Role role(RoleCode code) {
-        Role role = new Role(code, code.name());
-        ReflectionTestUtils.setField(role, "id", 1L);
-        return role;
     }
 
     private Permission permission() {

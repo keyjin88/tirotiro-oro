@@ -91,6 +91,6 @@ public class PermissionService {
     }
 
     public boolean isAdmin(User user) {
-        return user.getRoles().stream().anyMatch(role -> role.getCode() == RoleCode.ADMIN);
+        return userRepository.existsByIdAndRoleCode(user.getId(), RoleCode.ADMIN);
     }
 }

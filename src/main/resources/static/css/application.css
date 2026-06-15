@@ -1,26 +1,53 @@
 :root {
-    color-scheme: light;
+    --accent: #60a5fa;
+    --accent-strong: #2563eb;
+    --accent-stronger: #1d4ed8;
+    --bg: #0f172a;
+    --bg-elevated: #111c32;
+    --bg-muted: #1e293b;
+    --border: #334155;
+    --danger: #dc2626;
+    --danger-strong: #b91c1c;
+    --danger-surface: #3f1d24;
+    --danger-text: #fecaca;
+    --focus-ring: rgb(96 165 250 / 42%);
+    --link: #93c5fd;
+    --shadow: 0 18px 48px rgb(0 0 0 / 28%);
+    --success-surface: #143323;
+    --success-text: #bbf7d0;
+    --surface: #162033;
+    --surface-hover: #1e2b44;
+    --text: #e5edf8;
+    --text-muted: #94a3b8;
+    --text-strong: #f8fafc;
+    color-scheme: dark;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body {
     margin: 0;
-    background: #f8fafc;
-    color: #172033;
+    background:
+        radial-gradient(circle at top left, rgb(37 99 235 / 16%), transparent 24rem),
+        var(--bg);
+    color: var(--text);
 }
 
 a {
-    color: #1d4ed8;
+    color: var(--link);
     text-decoration: none;
+}
+
+a:hover {
+    color: var(--text-strong);
 }
 
 button,
 .button {
     align-items: center;
-    background: #1d4ed8;
-    border: 0;
+    background: var(--accent-strong);
+    border: 1px solid var(--accent-strong);
     border-radius: 0.55rem;
-    color: white;
+    color: var(--text-strong);
     cursor: pointer;
     display: inline-flex;
     font: inherit;
@@ -29,26 +56,61 @@ button,
     padding: 0.65rem 0.9rem;
 }
 
+button:hover,
+.button:hover {
+    background: var(--accent-stronger);
+    color: var(--text-strong);
+}
+
 button.secondary,
 .button.secondary {
-    background: #e2e8f0;
-    color: #172033;
+    background: var(--bg-muted);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+button.secondary:hover,
+.button.secondary:hover {
+    background: var(--surface-hover);
 }
 
 button.danger,
 .button.danger {
-    background: #b91c1c;
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+button.danger:hover,
+.button.danger:hover {
+    background: var(--danger-strong);
 }
 
 input,
 select,
 textarea {
-    border: 1px solid #cbd5e1;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
     border-radius: 0.45rem;
     box-sizing: border-box;
+    color: var(--text);
     font: inherit;
     padding: 0.55rem 0.65rem;
     width: 100%;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+.button:focus-visible,
+a:focus-visible {
+    box-shadow: 0 0 0 0.2rem var(--focus-ring);
+    outline: 2px solid transparent;
 }
 
 textarea {
@@ -62,16 +124,20 @@ table {
 
 th,
 td {
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border);
     padding: 0.75rem;
     text-align: left;
     vertical-align: top;
 }
 
 th {
-    color: #475569;
+    color: var(--text-muted);
     font-size: 0.85rem;
     text-transform: uppercase;
+}
+
+tbody tr:hover {
+    background: rgb(30 41 59 / 46%);
 }
 
 .page {
@@ -86,15 +152,18 @@ th {
 
 .topbar {
     align-items: center;
-    background: white;
-    border-bottom: 1px solid #e2e8f0;
+    background: rgb(15 23 42 / 88%);
+    border-bottom: 1px solid var(--border);
     display: flex;
     gap: 1.25rem;
     padding: 0.85rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .brand {
-    color: #172033;
+    color: var(--text-strong);
     font-weight: 750;
 }
 
@@ -120,10 +189,10 @@ th {
 
 .card,
 .auth-card {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: rgb(22 32 51 / 92%);
+    border: 1px solid var(--border);
     border-radius: 0.8rem;
-    box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+    box-shadow: var(--shadow);
     padding: 1rem;
 }
 
@@ -163,7 +232,7 @@ th {
 }
 
 .muted {
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .flash,
@@ -175,19 +244,22 @@ th {
 
 .flash.success,
 .notice {
-    background: #dcfce7;
-    color: #14532d;
+    background: var(--success-surface);
+    border: 1px solid rgb(34 197 94 / 30%);
+    color: var(--success-text);
 }
 
 .flash.error {
-    background: #fee2e2;
-    color: #7f1d1d;
+    background: var(--danger-surface);
+    border: 1px solid rgb(248 113 113 / 30%);
+    color: var(--danger-text);
 }
 
 .pill {
-    background: #e0f2fe;
+    background: rgb(14 165 233 / 18%);
     border-radius: 999px;
-    color: #075985;
+    border: 1px solid rgb(56 189 248 / 28%);
+    color: #bae6fd;
     display: inline-block;
     font-size: 0.8rem;
     font-weight: 700;
@@ -202,10 +274,10 @@ th {
 }
 
 .details dt {
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .empty {
-    color: #64748b;
+    color: var(--text-muted);
     text-align: center;
 }

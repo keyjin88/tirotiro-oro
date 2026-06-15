@@ -34,6 +34,16 @@ MVP должен поддерживать покрытие строк рабоч
 
 Интеграционные тесты должны выполняться во время `mvn verify` через Maven Failsafe. Они должны использовать Testcontainers PostgreSQL, чтобы поведение базы данных было максимально близко к production-базе.
 
+Для локального запуска интеграционных тестов Maven должен видеть рабочий Docker daemon. Проверка окружения перед диагностикой падений или пропусков:
+
+```sh
+docker info
+docker run --rm hello-world
+mvn -Dit.test=EquipmentWarehousePostgresIT failsafe:integration-test failsafe:verify
+```
+
+Если Docker доступен, `EquipmentWarehousePostgresIT` не должен пропускаться. В проекте используется Testcontainers `1.21.4`, потому что Testcontainers `1.21.3` некорректно определял доступность Docker Engine 29 и приводил к пропуску PostgreSQL IT.
+
 Обязательные области интеграционного покрытия:
 
 - миграции Liquibase корректно применяются к PostgreSQL;

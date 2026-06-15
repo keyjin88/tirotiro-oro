@@ -1,8 +1,10 @@
 package oro.tirotiro.equipmentwarehouse.booking;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +36,34 @@ class BookingServiceTests {
 
     private static final Instant START = Instant.parse("2026-06-15T09:00:00Z");
     private static final Instant END = Instant.parse("2026-06-15T10:00:00Z");
+
+    @Test
+    void visibleBookingsUsesAdminPermissionPath() {
+        BookingRepository bookingRepository = mock(BookingRepository.class);
+        EquipmentItemRepository itemRepository = mock(EquipmentItemRepository.class);
+        EquipmentUnitRepository unitRepository = mock(EquipmentUnitRepository.class);
+        AvailabilityService availabilityService = mock(AvailabilityService.class);
+        PermissionService permissionService = mock(PermissionService.class);
+        AuditService auditService = mock(AuditService.class);
+        BookingService bookingService = new BookingService(
+                bookingRepository,
+                itemRepository,
+                unitRepository,
+                availabilityService,
+                permissionService,
+                auditService,
+                Clock.fixed(START, ZoneOffset.UTC));
+        User actor = user();
+        Booking booking = new Booking(actor, START, END, BookingStatus.BOOKED);
+        when(permissionService.isAdmin(actor)).thenReturn(true);
+        when(bookingRepository.findAllByOrderByStartsAtDesc()).thenReturn(List.of(booking));
+
+        assertThat(bookingService.visibleBookings(actor)).containsExactly(booking);
+
+        verify(permissionService).isAdmin(actor);
+        verify(bookingRepository).findAllByOrderByStartsAtDesc();
+        verify(bookingRepository, never()).findByUser_IdOrderByStartsAtDesc(actor.getId());
+    }
 
     @Test
     void creationLocksEquipmentItemsInStableSortedOrder() {

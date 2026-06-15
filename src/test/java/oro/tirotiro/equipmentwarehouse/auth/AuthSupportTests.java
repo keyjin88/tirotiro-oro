@@ -88,7 +88,7 @@ class AuthSupportTests {
         User user = user("viewer@example.com");
         AuthenticatedUser principal = new AuthenticatedUser(user, List.of());
         UserRepository userRepository = mock(UserRepository.class);
-        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(userRepository.findByIdWithRolesAndPermissions(user.getId())).thenReturn(Optional.of(user));
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities()));
 
@@ -97,6 +97,7 @@ class AuthSupportTests {
         assertThat(service.currentUserId()).contains(user.getId());
         assertThat(service.currentUser()).contains(user);
         assertThat(service.requireCurrentUser()).isEqualTo(user);
+        verify(userRepository, never()).findById(user.getId());
     }
 
     @Test

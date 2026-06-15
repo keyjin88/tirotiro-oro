@@ -37,7 +37,7 @@ public class CurrentUserService {
 
     @Transactional(readOnly = true)
     public Optional<User> currentUser() {
-        return currentUserId().flatMap(userRepository::findById);
+        return currentUserId().flatMap(userRepository::findByIdWithRolesAndPermissions);
     }
 
     @Transactional(readOnly = true)
