@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
+import oro.tirotiro.equipmentwarehouse.auth.UserAdministrationService;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleCode;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.InventoryService;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
@@ -32,6 +34,7 @@ public class AdminController {
 
     private final InventoryService inventoryService;
     private final PermissionService permissionService;
+    private final UserAdministrationService userAdministrationService;
     private final CurrentUserService currentUserService;
     private final EquipmentCategoryRepository categoryRepository;
     private final EquipmentItemRepository itemRepository;
@@ -41,6 +44,7 @@ public class AdminController {
     public AdminController(
             InventoryService inventoryService,
             PermissionService permissionService,
+            UserAdministrationService userAdministrationService,
             CurrentUserService currentUserService,
             EquipmentCategoryRepository categoryRepository,
             EquipmentItemRepository itemRepository,
@@ -48,6 +52,7 @@ public class AdminController {
             PermissionRepository permissionRepository) {
         this.inventoryService = inventoryService;
         this.permissionService = permissionService;
+        this.userAdministrationService = userAdministrationService;
         this.currentUserService = currentUserService;
         this.categoryRepository = categoryRepository;
         this.itemRepository = itemRepository;
@@ -141,9 +146,30 @@ public class AdminController {
     @GetMapping("/users")
     public String users(Model model) {
         model.addAttribute("users", userRepository.findAllWithRolesAndPermissions());
+        model.addAttribute("roleCodes", RoleCode.values());
         model.addAttribute("permissions", permissionRepository.findAll());
         model.addAttribute("permissionCodes", PermissionCode.values());
         return "admin/users";
+    }
+
+    @PostMapping("/users/{userId}/roles")
+    public String updateRole(
+            @PathVariable UUID userId,
+            @RequestParam RoleCode roleCode,
+            @RequestParam String action,
+            RedirectAttributes redirectAttributes) {
+        try {
+            if ("grant".equals(action)) {
+                userAdministrationService.grantRole(userId, roleCode, currentUserService.requireCurrentUser());
+                redirectAttributes.addFlashAttribute("message", "Роль выдана");
+            } else if ("revoke".equals(action)) {
+                userAdministrationService.revokeRole(userId, roleCode, currentUserService.requireCurrentUser());
+                redirectAttributes.addFlashAttribute("message", "Роль отозвана");
+            }
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/admin/users";
     }
 
     @PostMapping("/users/{userId}/permissions")

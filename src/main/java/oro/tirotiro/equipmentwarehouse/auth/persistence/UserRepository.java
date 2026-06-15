@@ -20,6 +20,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             + "from User user join user.roles role where role.code = :roleCode")
     boolean existsByRoleCode(@Param("roleCode") RoleCode roleCode);
 
+    @Query("select count(user) from User user join user.roles role where role.code = :roleCode")
+    long countByRoleCode(@Param("roleCode") RoleCode roleCode);
+
     @Query("select case when count(user) > 0 then true else false end "
             + "from User user join user.roles role where user.id = :userId and role.code = :roleCode")
     boolean existsByIdAndRoleCode(@Param("userId") UUID userId, @Param("roleCode") RoleCode roleCode);

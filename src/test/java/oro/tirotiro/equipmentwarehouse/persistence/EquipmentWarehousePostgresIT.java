@@ -106,7 +106,7 @@ class EquipmentWarehousePostgresIT {
                 command(item, START.plusSeconds(300), END.plusSeconds(300), "overlap"),
                 actor))
                 .isInstanceOf(AvailabilityException.class)
-                .hasMessageContaining("Insufficient quantity");
+                .hasMessageContaining(item.getId().toString());
 
         bookingService.cancelBooking(booking.getId(), "not needed", actor);
 

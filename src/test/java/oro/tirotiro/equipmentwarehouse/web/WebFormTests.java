@@ -96,6 +96,20 @@ class WebFormTests {
     }
 
     @Test
+    void registrationFormBuildsRegistrationCommandAndChecksPasswordConfirmation() {
+        RegistrationForm form = new RegistrationForm();
+        form.setEmail("viewer@example.com");
+        form.setDisplayName("Viewer");
+        form.setPassword("password123");
+        form.setPasswordConfirmation("password123");
+
+        assertThat(form.passwordsMatch()).isTrue();
+        assertThat(form.toCommand().email()).isEqualTo("viewer@example.com");
+        assertThat(form.toCommand().displayName()).isEqualTo("Viewer");
+        assertThat(form.toCommand().password()).isEqualTo("password123");
+    }
+
+    @Test
     void cancelBookingFormStoresReason() {
         CancelBookingForm form = new CancelBookingForm();
         form.setReason("Changed plan");

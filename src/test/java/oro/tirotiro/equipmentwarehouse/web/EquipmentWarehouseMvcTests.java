@@ -3,6 +3,7 @@ package oro.tirotiro.equipmentwarehouse.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -36,6 +37,9 @@ import org.springframework.mock.web.MockHttpSession;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
 import oro.tirotiro.equipmentwarehouse.auth.SecurityConfig;
+import oro.tirotiro.equipmentwarehouse.auth.UserAdministrationService;
+import oro.tirotiro.equipmentwarehouse.auth.UserRegistrationService;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleCode;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
@@ -51,6 +55,7 @@ import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemReposi
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnitRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.TrackingMode;
 import oro.tirotiro.equipmentwarehouse.permission.PermissionService;
+import oro.tirotiro.equipmentwarehouse.permission.persistence.PermissionCode;
 import oro.tirotiro.equipmentwarehouse.permission.persistence.PermissionRepository;
 
 @WebMvcTest(controllers = {
@@ -88,6 +93,12 @@ class EquipmentWarehouseMvcTests {
     private PermissionService permissionService;
 
     @MockitoBean
+    private UserRegistrationService userRegistrationService;
+
+    @MockitoBean
+    private UserAdministrationService userAdministrationService;
+
+    @MockitoBean
     private CurrentUserService currentUserService;
 
     @MockitoBean
@@ -113,6 +124,52 @@ class EquipmentWarehouseMvcTests {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Вход")));
+    }
+
+    @Test
+    void registrationPageIsPublic() throws Exception {
+        mockMvc.perform(get("/register"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Регистрация")));
+    }
+
+    @Test
+    void registrationSuccessRedirectsToLogin() throws Exception {
+        mockMvc.perform(post("/register")
+                .with(csrf())
+                .param("email", "viewer@example.com")
+                .param("displayName", "Viewer")
+                .param("password", "password123")
+                .param("passwordConfirmation", "password123"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+
+        verify(userRegistrationService).register(any(UserRegistrationService.RegisterUserCommand.class));
+    }
+
+    @Test
+    void registrationValidationRerendersFormForMismatchAndDuplicateEmail() throws Exception {
+        mockMvc.perform(post("/register")
+                .with(csrf())
+                .param("email", "viewer@example.com")
+                .param("displayName", "Viewer")
+                .param("password", "password123")
+                .param("passwordConfirmation", "different"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Пароли не совпадают")));
+
+        doThrow(new UserRegistrationService.DuplicateEmailException("Пользователь с такой почтой уже зарегистрирован."))
+                .when(userRegistrationService)
+                .register(any(UserRegistrationService.RegisterUserCommand.class));
+
+        mockMvc.perform(post("/register")
+                .with(csrf())
+                .param("email", "viewer@example.com")
+                .param("displayName", "Viewer")
+                .param("password", "password123")
+                .param("passwordConfirmation", "password123"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("уже зарегистрирован")));
     }
 
     @Test
@@ -150,6 +207,42 @@ class EquipmentWarehouseMvcTests {
     void adminEquipmentRequiresAdminRole() throws Exception {
         mockMvc.perform(get("/admin/equipment").with(user("operator").roles("USER")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminUserMutationsRequireAdminRole() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/users/{id}/roles", userId)
+                .with(user("operator").roles("USER"))
+                .with(csrf())
+                .param("roleCode", RoleCode.ADMIN.name())
+                .param("action", "grant"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/users/{id}/permissions", userId)
+                .with(user("operator").roles("USER"))
+                .with(csrf())
+                .param("permissionCode", PermissionCode.EQUIPMENT_CREATE.name())
+                .param("action", "grant"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminRoleMutationDelegatesToUserAdministrationService() throws Exception {
+        UUID userId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/admin/users/{id}/roles", userId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .param("roleCode", RoleCode.ADMIN.name())
+                .param("action", "grant"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users"));
+
+        verify(userAdministrationService).grantRole(userId, RoleCode.ADMIN, actor);
     }
 
     @Test

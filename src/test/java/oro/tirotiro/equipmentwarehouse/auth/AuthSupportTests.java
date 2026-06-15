@@ -2,6 +2,8 @@ package oro.tirotiro.equipmentwarehouse.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -23,6 +25,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import oro.tirotiro.equipmentwarehouse.audit.AuditService;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.Role;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleCode;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleRepository;
@@ -173,6 +176,97 @@ class AuthSupportTests {
                 .hasMessageContaining("APP_BOOTSTRAP_ADMIN_EMAIL")
                 .hasMessageContaining("APP_BOOTSTRAP_ADMIN_PASSWORD");
         verifyNoInteractions(roleRepository, passwordEncoder);
+    }
+
+    @Test
+    void registrationCreatesEnabledUserRoleOnlyAccountWithEncodedPassword() {
+        UserRepository userRepository = mock(UserRepository.class);
+        RoleRepository roleRepository = mock(RoleRepository.class);
+        PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+        Role userRole = role(RoleCode.USER);
+        when(userRepository.findByEmailIgnoreCase("viewer@example.com")).thenReturn(Optional.empty());
+        when(roleRepository.findByCode(RoleCode.USER)).thenReturn(Optional.of(userRole));
+        when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
+
+        new UserRegistrationService(userRepository, roleRepository, passwordEncoder)
+                .register(new UserRegistrationService.RegisterUserCommand(
+                        " Viewer@Example.com ",
+                        " Viewer ",
+                        "password123"));
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue()).satisfies(user -> {
+            assertThat(user.getEmail()).isEqualTo("viewer@example.com");
+            assertThat(user.getDisplayName()).isEqualTo("Viewer");
+            assertThat(user.getPasswordHash()).isEqualTo("encoded-password");
+            assertThat(user.isEnabled()).isTrue();
+            assertThat(user.getRoles()).containsExactly(userRole);
+            assertThat(user.getPermissionGrants()).isEmpty();
+        });
+    }
+
+    @Test
+    void registrationRejectsDuplicateEmailBeforeEncodingPassword() {
+        UserRepository userRepository = mock(UserRepository.class);
+        RoleRepository roleRepository = mock(RoleRepository.class);
+        PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+        when(userRepository.findByEmailIgnoreCase("viewer@example.com")).thenReturn(Optional.of(user("viewer@example.com")));
+
+        assertThatThrownBy(() -> new UserRegistrationService(userRepository, roleRepository, passwordEncoder)
+                .register(new UserRegistrationService.RegisterUserCommand(
+                        "viewer@example.com",
+                        "Viewer",
+                        "password123")))
+                .isInstanceOf(UserRegistrationService.DuplicateEmailException.class)
+                .hasMessageContaining("уже зарегистрирован");
+
+        verifyNoInteractions(roleRepository, passwordEncoder);
+        verify(userRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void userAdministrationGrantsAndRevokesAdminRoleWithAudit() {
+        UserRepository userRepository = mock(UserRepository.class);
+        RoleRepository roleRepository = mock(RoleRepository.class);
+        AuditService auditService = mock(AuditService.class);
+        User actor = user("admin@example.com");
+        User target = user("target@example.com");
+        Role adminRole = role(RoleCode.ADMIN);
+        when(userRepository.findByIdWithRolesAndPermissions(target.getId())).thenReturn(Optional.of(target));
+        when(roleRepository.findByCode(RoleCode.ADMIN)).thenReturn(Optional.of(adminRole));
+        when(userRepository.countByRoleCode(RoleCode.ADMIN)).thenReturn(2L);
+        UserAdministrationService service = new UserAdministrationService(userRepository, roleRepository, auditService);
+
+        service.grantRole(target.getId(), RoleCode.ADMIN, actor);
+        service.revokeRole(target.getId(), RoleCode.ADMIN, actor);
+
+        assertThat(target.getRoles()).isEmpty();
+        verify(auditService).record(eq(actor), eq("ROLE_GRANTED"), eq("USER"), eq(target.getId()), any());
+        verify(auditService).record(eq(actor), eq("ROLE_REVOKED"), eq("USER"), eq(target.getId()), any());
+    }
+
+    @Test
+    void userAdministrationPreservesUserRoleAndLastAdmin() {
+        UserRepository userRepository = mock(UserRepository.class);
+        RoleRepository roleRepository = mock(RoleRepository.class);
+        AuditService auditService = mock(AuditService.class);
+        User actor = user("admin@example.com");
+        User target = user("target@example.com");
+        target.getRoles().add(role(RoleCode.ADMIN));
+        when(userRepository.findByIdWithRolesAndPermissions(target.getId())).thenReturn(Optional.of(target));
+        when(userRepository.countByRoleCode(RoleCode.ADMIN)).thenReturn(1L);
+        UserAdministrationService service = new UserAdministrationService(userRepository, roleRepository, auditService);
+
+        assertThatThrownBy(() -> service.revokeRole(target.getId(), RoleCode.USER, actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("USER нельзя отозвать");
+        assertThatThrownBy(() -> service.revokeRole(target.getId(), RoleCode.ADMIN, actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("последнего администратора");
+
+        assertThat(target.getRoles()).extracting(Role::getCode).containsExactly(RoleCode.ADMIN);
+        verifyNoInteractions(roleRepository, auditService);
     }
 
     private User user(String email) {

@@ -235,6 +235,17 @@ tbody tr:hover {
     color: var(--text-muted);
 }
 
+.auth-link {
+    margin-bottom: 0;
+}
+
+.field-error {
+    color: var(--danger-text);
+    display: block;
+    font-size: 0.85rem;
+    margin-top: 0.35rem;
+}
+
 .flash,
 .notice {
     border-radius: 0.55rem;
