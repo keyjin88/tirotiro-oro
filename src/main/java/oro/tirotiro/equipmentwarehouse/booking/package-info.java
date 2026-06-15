@@ -1,4 +1,4 @@
 /**
- * Booking creation, modification, cancellation, and availability enforcement.
+ * Создание, изменение, отмена бронирований и контроль доступности.
  */
 package oro.tirotiro.equipmentwarehouse.booking;

@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
 <body>
 <section id="equipment-table" th:fragment="equipmentTable" class="card">
     <table>
         <thead>
         <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Tracking</th>
-            <th>Total</th>
+            <th th:text="#{equipment.table.name}">Название</th>
+            <th th:text="#{equipment.table.category}">Категория</th>
+            <th th:text="#{equipment.table.tracking}">Учет</th>
+            <th th:text="#{equipment.table.total}">Всего</th>
             <th></th>
         </tr>
         </thead>
@@ -16,15 +16,15 @@
         <tr th:each="item : ${items}">
             <td>
                 <strong th:text="${item.name}">Camera</strong>
-                <div class="muted" th:text="${item.manufacturer ?: ''}">Manufacturer</div>
+                <div class="muted" th:text="${item.manufacturer ?: ''}">Производитель</div>
             </td>
-            <td th:text="${item.category.name}">Category</td>
-            <td><span class="pill" th:text="${item.trackingMode}">QUANTITY</span></td>
+            <td th:text="${item.category.name}">Категория</td>
+            <td><span class="pill" th:text="${#messages.msg('enum.TrackingMode.' + item.trackingMode.name())}">Количественный учет</span></td>
             <td th:text="${item.totalQuantity}">1</td>
-            <td><a th:href="@{/equipment/{id}(id=${item.id})}">Details</a></td>
+            <td><a th:href="@{/equipment/{id}(id=${item.id})}" th:text="#{equipment.table.details}">Подробнее</a></td>
         </tr>
         <tr th:if="${#lists.isEmpty(items)}">
-            <td colspan="5" class="empty">No active equipment yet.</td>
+            <td colspan="5" class="empty" th:text="#{equipment.table.empty}">Активного оборудования пока нет.</td>
         </tr>
         </tbody>
     </table>

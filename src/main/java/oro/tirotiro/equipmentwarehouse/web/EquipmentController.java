@@ -82,7 +82,7 @@ public class EquipmentController {
         }
         try {
             EquipmentItem item = inventoryService.createItem(form.toCommand(), currentUserService.requireCurrentUser());
-            redirectAttributes.addFlashAttribute("message", "Equipment created");
+            redirectAttributes.addFlashAttribute("message", "Оборудование создано");
             return "redirect:/equipment/" + item.getId();
         } catch (RuntimeException ex) {
             model.addAttribute("error", ex.getMessage());
@@ -136,7 +136,7 @@ public class EquipmentController {
 
     private void addDetailsModel(UUID itemId, Model model) {
         EquipmentItem item = itemRepository.findDetailedById(itemId)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment item not found: " + itemId));
+                .orElseThrow(() -> new IllegalArgumentException("Оборудование не найдено: " + itemId));
         model.addAttribute("item", item);
         model.addAttribute("units", unitRepository.findByEquipmentItem_IdAndArchivedFalse(itemId));
     }

@@ -14,7 +14,7 @@ public class UnitForm {
     private String serialNumber;
 
     @NotBlank
-    private String condition = "Ready";
+    private String condition = "Готово";
 
     @NotNull
     private EquipmentUnitStatus status = EquipmentUnitStatus.AVAILABLE;

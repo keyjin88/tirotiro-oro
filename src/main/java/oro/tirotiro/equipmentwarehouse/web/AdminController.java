@@ -78,7 +78,7 @@ public class AdminController {
         }
         try {
             inventoryService.createCategory(form.toCommand(), currentUserService.requireCurrentUser());
-            redirectAttributes.addFlashAttribute("message", "Category created");
+            redirectAttributes.addFlashAttribute("message", "Категория создана");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }
@@ -97,7 +97,7 @@ public class AdminController {
         }
         try {
             inventoryService.createItem(form.toCommand(), currentUserService.requireCurrentUser());
-            redirectAttributes.addFlashAttribute("message", "Equipment created");
+            redirectAttributes.addFlashAttribute("message", "Оборудование создано");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }
@@ -117,7 +117,7 @@ public class AdminController {
         }
         try {
             inventoryService.createUnit(itemId, form.toCommand(), currentUserService.requireCurrentUser());
-            redirectAttributes.addFlashAttribute("message", "Unit created");
+            redirectAttributes.addFlashAttribute("message", "Единица создана");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }
@@ -131,7 +131,7 @@ public class AdminController {
             RedirectAttributes redirectAttributes) {
         try {
             inventoryService.softDeleteItem(itemId, reason, currentUserService.requireCurrentUser());
-            redirectAttributes.addFlashAttribute("message", "Equipment archived");
+            redirectAttributes.addFlashAttribute("message", "Оборудование архивировано");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }
@@ -155,10 +155,10 @@ public class AdminController {
         try {
             if ("grant".equals(action)) {
                 permissionService.grantPermission(userId, permissionCode, currentUserService.requireCurrentUser());
-                redirectAttributes.addFlashAttribute("message", "Permission granted");
+                redirectAttributes.addFlashAttribute("message", "Право выдано");
             } else if ("revoke".equals(action)) {
                 permissionService.revokePermission(userId, permissionCode, currentUserService.requireCurrentUser());
-                redirectAttributes.addFlashAttribute("message", "Permission revoked");
+                redirectAttributes.addFlashAttribute("message", "Право отозвано");
             }
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());

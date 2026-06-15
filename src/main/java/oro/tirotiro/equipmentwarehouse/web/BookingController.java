@@ -79,7 +79,7 @@ public class BookingController {
         }
         try {
             bookingService.createBooking(form.toCommand(appProperties.timeZone()), currentUserService.requireCurrentUser());
-            redirectAttributes.addFlashAttribute("message", "Booking created");
+            redirectAttributes.addFlashAttribute("message", "Бронирование создано");
             return "redirect:/bookings";
         } catch (AvailabilityException | IllegalArgumentException ex) {
             model.addAttribute("error", ex.getMessage());
@@ -95,7 +95,7 @@ public class BookingController {
             RedirectAttributes redirectAttributes) {
         try {
             bookingService.cancelBooking(bookingId, form.getReason(), currentUserService.requireCurrentUser());
-            redirectAttributes.addFlashAttribute("message", "Booking cancelled");
+            redirectAttributes.addFlashAttribute("message", "Бронирование отменено");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }

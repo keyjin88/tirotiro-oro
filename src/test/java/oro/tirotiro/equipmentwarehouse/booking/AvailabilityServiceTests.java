@@ -40,7 +40,7 @@ class AvailabilityServiceTests {
                 List.of(existing),
                 null))
                 .isInstanceOf(AvailabilityException.class)
-                .hasMessageContaining("Insufficient quantity");
+                .hasMessageContaining("Недостаточно количества");
     }
 
     @Test
@@ -74,7 +74,7 @@ class AvailabilityServiceTests {
                 List.of(),
                 null))
                 .isInstanceOf(AvailabilityException.class)
-                .hasMessageContaining("Equipment unit is not available");
+                .hasMessageContaining("Единица оборудования недоступна");
     }
 
     private EquipmentItem item(TrackingMode trackingMode, int totalQuantity) {

@@ -44,7 +44,7 @@ public class PermissionService {
     @Transactional(readOnly = true)
     public boolean hasPermission(UUID userId, PermissionCode permissionCode) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден: " + userId));
         if (isAdmin(user)) {
             return true;
         }
@@ -54,16 +54,16 @@ public class PermissionService {
 
     public void requireEquipmentCreate(User user) {
         if (!isAdmin(user) && !hasPermission(user.getId(), PermissionCode.EQUIPMENT_CREATE)) {
-            throw new AccessDeniedException("EQUIPMENT_CREATE permission is required");
+            throw new AccessDeniedException("Требуется право EQUIPMENT_CREATE");
         }
     }
 
     @Transactional
     public void grantPermission(UUID targetUserId, PermissionCode permissionCode, User actor) {
         User target = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден: " + targetUserId));
         Permission permission = permissionRepository.findByCode(permissionCode)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found: " + permissionCode));
+                .orElseThrow(() -> new IllegalArgumentException("Право не найдено: " + permissionCode));
         UserPermissionId id = new UserPermissionId(target.getId(), permission.getId());
         if (userPermissionRepository.existsById(id)) {
             return;
@@ -77,9 +77,9 @@ public class PermissionService {
     @Transactional
     public void revokePermission(UUID targetUserId, PermissionCode permissionCode, User actor) {
         User target = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден: " + targetUserId));
         Permission permission = permissionRepository.findByCode(permissionCode)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found: " + permissionCode));
+                .orElseThrow(() -> new IllegalArgumentException("Право не найдено: " + permissionCode));
         UserPermissionId id = new UserPermissionId(target.getId(), permission.getId());
         if (!userPermissionRepository.existsById(id)) {
             return;

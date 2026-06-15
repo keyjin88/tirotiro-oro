@@ -1,4 +1,4 @@
 /**
- * Administrative workflows for users, permissions, equipment catalog management, and booking oversight.
+ * Административные сценарии для пользователей, прав, управления каталогом оборудования и контроля бронирований.
  */
 package oro.tirotiro.equipmentwarehouse.admin;

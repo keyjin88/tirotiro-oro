@@ -138,14 +138,14 @@ public class BookingService {
         boolean admin = permissionService.isAdmin(actor);
         if (!admin) {
             if (!booking.getUser().getId().equals(actor.getId())) {
-                throw new AccessDeniedException("Users can cancel only their own bookings");
+                throw new AccessDeniedException("Пользователи могут отменять только свои бронирования");
             }
             if (!booking.getStartsAt().isAfter(clock.instant())) {
-                throw new IllegalArgumentException("Only future bookings can be cancelled by the owner");
+                throw new IllegalArgumentException("Владелец может отменять только будущие бронирования");
             }
         }
         if (admin && (reason == null || reason.isBlank())) {
-            throw new IllegalArgumentException("Admin cancellation reason is required");
+            throw new IllegalArgumentException("Администратор должен указать причину отмены");
         }
 
         booking.cancel(actor, reason, clock.instant());
@@ -156,21 +156,21 @@ public class BookingService {
 
     private Booking requireBooking(UUID bookingId) {
         return bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+                .orElseThrow(() -> new IllegalArgumentException("Бронирование не найдено: " + bookingId));
     }
 
     private void requireBookingEditable(Booking booking, User actor) {
         if (booking.getStatus() != BookingStatus.BOOKED) {
-            throw new IllegalArgumentException("Only active bookings can be changed");
+            throw new IllegalArgumentException("Изменять можно только активные бронирования");
         }
         if (!permissionService.isAdmin(actor) && !booking.getUser().getId().equals(actor.getId())) {
-            throw new AccessDeniedException("Users can change only their own bookings");
+            throw new AccessDeniedException("Пользователи могут изменять только свои бронирования");
         }
     }
 
     private LockedSelection lockSelection(Collection<BookingLineCommand> lines) {
         if (lines == null || lines.isEmpty()) {
-            throw new AvailabilityException("Booking must contain at least one line");
+            throw new AvailabilityException("Бронирование должно содержать хотя бы одну позицию");
         }
         List<UUID> itemIds = lines.stream()
                 .map(BookingLineCommand::equipmentItemId)
@@ -186,10 +186,10 @@ public class BookingService {
         List<EquipmentItem> items = itemRepository.lockByIdInOrderById(itemIds);
         List<EquipmentUnit> units = unitIds.isEmpty() ? List.of() : unitRepository.lockByIdInOrderById(unitIds);
         if (items.size() != itemIds.size()) {
-            throw new AvailabilityException("One or more equipment items were not found");
+            throw new AvailabilityException("Одна или несколько позиций оборудования не найдены");
         }
         if (units.size() != unitIds.size()) {
-            throw new AvailabilityException("One or more equipment units were not found");
+            throw new AvailabilityException("Одна или несколько единиц оборудования не найдены");
         }
         return new LockedSelection(
                 itemIds,

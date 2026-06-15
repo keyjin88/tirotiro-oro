@@ -53,7 +53,7 @@ public class InventoryService {
     @Transactional
     public EquipmentCategory createCategory(CreateCategoryCommand command, User actor) {
         EquipmentCategory category = categoryRepository.save(new EquipmentCategory(
-                requireText(command.name(), "Category name"),
+                requireText(command.name(), "Название категории"),
                 command.description()));
         auditService.record(actor, "EQUIPMENT_CATEGORY_CREATED", "EQUIPMENT_CATEGORY", category.getId(), Map.of(
                 "name", category.getName()));
@@ -64,11 +64,11 @@ public class InventoryService {
     public EquipmentItem createItem(CreateItemCommand command, User actor) {
         permissionService.requireEquipmentCreate(actor);
         EquipmentCategory category = categoryRepository.findById(command.categoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Category not found: " + command.categoryId()));
+                .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + command.categoryId()));
         int totalQuantity = validateQuantity(command.trackingMode(), command.totalQuantity());
         EquipmentItem item = new EquipmentItem(
                 category,
-                requireText(command.name(), "Equipment name"),
+                requireText(command.name(), "Название оборудования"),
                 command.trackingMode(),
                 totalQuantity);
         item.updateDetails(category, command.name(), command.manufacturer(), command.model(), command.description());
@@ -84,8 +84,8 @@ public class InventoryService {
     public EquipmentItem updateItemDetails(UUID itemId, UpdateItemCommand command, User actor) {
         EquipmentItem item = requireItem(itemId);
         EquipmentCategory category = categoryRepository.findById(command.categoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Category not found: " + command.categoryId()));
-        item.updateDetails(category, requireText(command.name(), "Equipment name"),
+                .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + command.categoryId()));
+        item.updateDetails(category, requireText(command.name(), "Название оборудования"),
                 command.manufacturer(), command.model(), command.description());
         auditService.record(actor, "EQUIPMENT_ITEM_UPDATED", "EQUIPMENT_ITEM", item.getId(), Map.of(
                 "name", item.getName()));
@@ -96,7 +96,7 @@ public class InventoryService {
     public EquipmentItem changeQuantity(UUID itemId, int totalQuantity, User actor) {
         EquipmentItem item = requireItem(itemId);
         if (item.getTrackingMode() != TrackingMode.QUANTITY) {
-            throw new IllegalArgumentException("Only quantity-tracked items can change total quantity directly");
+            throw new IllegalArgumentException("Напрямую менять общее количество можно только для позиций с количественным учетом");
         }
         item.changeTotalQuantity(validateQuantity(TrackingMode.QUANTITY, totalQuantity));
         auditService.record(actor, "EQUIPMENT_QUANTITY_CHANGED", "EQUIPMENT_ITEM", item.getId(), Map.of(
@@ -107,7 +107,7 @@ public class InventoryService {
     @Transactional
     public EquipmentItem softDeleteItem(UUID itemId, String reason, User actor) {
         EquipmentItem item = requireItem(itemId);
-        item.softDelete(actor, requireText(reason, "Delete reason"), clock.instant());
+        item.softDelete(actor, requireText(reason, "Причина удаления"), clock.instant());
         auditService.record(actor, "EQUIPMENT_ITEM_DELETED", "EQUIPMENT_ITEM", item.getId(), Map.of(
                 "reason", item.getDeleteReason()));
         return item;
@@ -117,12 +117,12 @@ public class InventoryService {
     public EquipmentUnit createUnit(UUID itemId, CreateUnitCommand command, User actor) {
         EquipmentItem item = requireItem(itemId);
         if (item.getTrackingMode() != TrackingMode.UNIT) {
-            throw new IllegalArgumentException("Units can only be added to unit-tracked items");
+            throw new IllegalArgumentException("Единицы можно добавлять только к позициям с поштучным учетом");
         }
         EquipmentUnit unit = new EquipmentUnit(
                 item,
-                requireText(command.inventoryNumber(), "Inventory number"),
-                requireText(command.condition(), "Condition"),
+                requireText(command.inventoryNumber(), "Инвентарный номер"),
+                requireText(command.condition(), "Состояние"),
                 command.status());
         unit.updateDetails(command.serialNumber(), command.condition(), command.status(), command.notes());
         EquipmentUnit saved = unitRepository.save(unit);
@@ -135,7 +135,7 @@ public class InventoryService {
     @Transactional
     public EquipmentUnit updateUnit(UUID unitId, UpdateUnitCommand command, User actor) {
         EquipmentUnit unit = requireUnit(unitId);
-        unit.updateDetails(command.serialNumber(), requireText(command.condition(), "Condition"),
+        unit.updateDetails(command.serialNumber(), requireText(command.condition(), "Состояние"),
                 command.status(), command.notes());
         auditService.record(actor, "EQUIPMENT_UNIT_UPDATED", "EQUIPMENT_UNIT", unit.getId(), Map.of(
                 "status", unit.getStatus().name()));
@@ -145,7 +145,7 @@ public class InventoryService {
     @Transactional
     public EquipmentUnit softDeleteUnit(UUID unitId, String reason, User actor) {
         EquipmentUnit unit = requireUnit(unitId);
-        unit.softDelete(actor, requireText(reason, "Delete reason"), clock.instant());
+        unit.softDelete(actor, requireText(reason, "Причина удаления"), clock.instant());
         auditService.record(actor, "EQUIPMENT_UNIT_DELETED", "EQUIPMENT_UNIT", unit.getId(), Map.of(
                 "reason", unit.getDeleteReason()));
         return unit;
@@ -153,27 +153,27 @@ public class InventoryService {
 
     private EquipmentItem requireItem(UUID itemId) {
         return itemRepository.findById(itemId)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment item not found: " + itemId));
+                .orElseThrow(() -> new IllegalArgumentException("Оборудование не найдено: " + itemId));
     }
 
     private EquipmentUnit requireUnit(UUID unitId) {
         return unitRepository.findById(unitId)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment unit not found: " + unitId));
+                .orElseThrow(() -> new IllegalArgumentException("Единица оборудования не найдена: " + unitId));
     }
 
     private String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " is required");
+            throw new IllegalArgumentException(fieldName + " обязательно для заполнения");
         }
         return value.trim();
     }
 
     private int validateQuantity(TrackingMode trackingMode, int totalQuantity) {
         if (trackingMode == TrackingMode.QUANTITY && totalQuantity < 1) {
-            throw new IllegalArgumentException("Quantity-tracked items require positive total quantity");
+            throw new IllegalArgumentException("Для позиций с количественным учетом нужно положительное общее количество");
         }
         if (trackingMode == TrackingMode.UNIT && totalQuantity < 0) {
-            throw new IllegalArgumentException("Unit-tracked item quantity must not be negative");
+            throw new IllegalArgumentException("Количество позиции с поштучным учетом не должно быть отрицательным");
         }
         return totalQuantity;
     }

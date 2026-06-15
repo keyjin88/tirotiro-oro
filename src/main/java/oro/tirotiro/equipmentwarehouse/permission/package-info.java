@@ -1,4 +1,4 @@
 /**
- * Assignable user capabilities such as EQUIPMENT_CREATE.
+ * Назначаемые возможности пользователя, например EQUIPMENT_CREATE.
  */
 package oro.tirotiro.equipmentwarehouse.permission;

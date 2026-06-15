@@ -1,4 +1,4 @@
 /**
- * Application configuration properties and framework integration.
+ * Свойства конфигурации приложения и интеграция с фреймворком.
  */
 package oro.tirotiro.equipmentwarehouse.config;

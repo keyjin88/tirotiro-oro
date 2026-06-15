@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="en" xmlns:th="https://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Bookings')}"></head>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{bookings.title})}"></head>
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <main class="page">
     <section th:replace="~{fragments/layout :: flash}"></section>
     <div class="page-title">
         <div>
-            <h1>Bookings</h1>
-            <p class="muted">Review visible bookings and cancel future bookings where allowed.</p>
+            <h1 th:text="#{bookings.heading}">Бронирования</h1>
+            <p class="muted" th:text="#{bookings.subtitle}">Просматривайте доступные бронирования и отменяйте будущие бронирования, когда это разрешено.</p>
         </div>
-        <a class="button" th:href="@{/bookings/new}">New booking</a>
+        <a class="button" th:href="@{/bookings/new}" th:text="#{bookings.new}">Новое бронирование</a>
     </div>
     <section th:replace="~{bookings/partials/table :: bookingsTable}"></section>
 </main>

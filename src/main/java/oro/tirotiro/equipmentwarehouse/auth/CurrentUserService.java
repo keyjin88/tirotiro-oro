@@ -42,6 +42,6 @@ public class CurrentUserService {
 
     @Transactional(readOnly = true)
     public User requireCurrentUser() {
-        return currentUser().orElseThrow(() -> new IllegalStateException("Authenticated user is required"));
+        return currentUser().orElseThrow(() -> new IllegalStateException("Требуется аутентифицированный пользователь"));
     }
 }

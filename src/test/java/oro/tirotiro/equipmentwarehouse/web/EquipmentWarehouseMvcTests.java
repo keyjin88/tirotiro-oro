@@ -42,6 +42,7 @@ import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
 import oro.tirotiro.equipmentwarehouse.booking.BookingService;
 import oro.tirotiro.equipmentwarehouse.calendar.CalendarService;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
+import oro.tirotiro.equipmentwarehouse.config.LocaleConfig;
 import oro.tirotiro.equipmentwarehouse.inventory.InventoryService;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
@@ -60,7 +61,7 @@ import oro.tirotiro.equipmentwarehouse.permission.persistence.PermissionReposito
         EquipmentController.class,
         HomeController.class
 })
-@Import({SecurityConfig.class, UiControllerAdvice.class, EquipmentWarehouseMvcTests.TestConfig.class})
+@Import({SecurityConfig.class, UiControllerAdvice.class, LocaleConfig.class, EquipmentWarehouseMvcTests.TestConfig.class})
 class EquipmentWarehouseMvcTests {
 
     private static final Instant NOW = Instant.parse("2026-06-15T06:00:00Z");
@@ -111,7 +112,7 @@ class EquipmentWarehouseMvcTests {
     void loginPageIsPublic() throws Exception {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Sign in")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Вход")));
     }
 
     @Test
@@ -158,7 +159,7 @@ class EquipmentWarehouseMvcTests {
 
         mockMvc.perform(get("/equipment/new").with(user("creator").authorities(() -> "EQUIPMENT_CREATE")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Add Equipment")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Добавить оборудование")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Cameras")));
     }
 
@@ -182,7 +183,7 @@ class EquipmentWarehouseMvcTests {
 
         mockMvc.perform(get("/equipment").with(user("viewer").roles("USER")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Equipment Catalog")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Каталог оборудования")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Camera")));
     }
 
@@ -193,7 +194,7 @@ class EquipmentWarehouseMvcTests {
 
         mockMvc.perform(get("/bookings/new").with(user("viewer").roles("USER")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("New Booking")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Новое бронирование")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Lens")));
     }
 
@@ -252,7 +253,7 @@ class EquipmentWarehouseMvcTests {
                 .param("startsOn", "2026-06-15")
                 .param("endsOn", "2026-06-16"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-06-15 to 2026-06-16")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-06-15 — 2026-06-16")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Tripod")));
     }
 

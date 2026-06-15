@@ -49,18 +49,18 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
         String password = textOrNull(bootstrapAdmin == null ? null : bootstrapAdmin.password());
         if (email == null || password == null) {
             throw new IllegalStateException(
-                    "No ADMIN user exists. Set APP_BOOTSTRAP_ADMIN_EMAIL and APP_BOOTSTRAP_ADMIN_PASSWORD "
-                            + "to create the first admin.");
+                    "Пользователь ADMIN не найден. Укажите APP_BOOTSTRAP_ADMIN_EMAIL и APP_BOOTSTRAP_ADMIN_PASSWORD, "
+                            + "чтобы создать первого администратора.");
         }
 
         Role adminRole = roleRepository.findByCode(RoleCode.ADMIN)
-                .orElseThrow(() -> new IllegalStateException("ADMIN role is missing. Check database migrations."));
+                .orElseThrow(() -> new IllegalStateException("Роль ADMIN отсутствует. Проверьте миграции базы данных."));
         String displayName = textOrNull(bootstrapAdmin.name());
 
         User admin = new User(email, passwordEncoder.encode(password), displayName == null ? email : displayName);
         admin.getRoles().add(adminRole);
         userRepository.save(admin);
-        LOGGER.info("Created bootstrap admin user {}", email);
+        LOGGER.info("Создан начальный пользователь-администратор {}", email);
     }
 
     private String textOrNull(String value) {

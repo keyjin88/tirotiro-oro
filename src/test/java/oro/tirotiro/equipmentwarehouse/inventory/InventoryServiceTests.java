@@ -88,13 +88,13 @@ class InventoryServiceTests {
                         category.getId(), "Camera", null, null, null, TrackingMode.QUANTITY, 0),
                 actor()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("positive total quantity");
+                .hasMessageContaining("положительное общее количество");
 
         assertThatThrownBy(() -> inventoryService.createCategory(
                 new InventoryService.CreateCategoryCommand(" ", null),
                 actor()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Category name is required");
+                .hasMessageContaining("Название категории обязательно");
     }
 
     @Test
@@ -149,7 +149,7 @@ class InventoryServiceTests {
                 new InventoryService.CreateUnitCommand("INV-1", null, "Ready", EquipmentUnitStatus.AVAILABLE, null),
                 actor()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Units can only be added");
+                .hasMessageContaining("Единицы можно добавлять");
     }
 
     private User actor() {

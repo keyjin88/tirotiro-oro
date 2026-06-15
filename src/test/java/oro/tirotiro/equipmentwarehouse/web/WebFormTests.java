@@ -51,6 +51,8 @@ class WebFormTests {
     @Test
     void unitFormBuildsCreateCommand() {
         UnitForm form = new UnitForm();
+        assertThat(form.getCondition()).isEqualTo("Готово");
+
         form.setInventoryNumber("INV-1");
         form.setSerialNumber("SER-1");
         form.setCondition("Ready");

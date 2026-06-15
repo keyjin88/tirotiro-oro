@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
 <body>
 <select id="equipmentUnitId" name="equipmentUnitId" th:fragment="unitOptions">
-    <option value="">No specific unit</option>
-    <option th:each="unit : ${units}" th:value="${unit.id}" th:text="${unit.inventoryNumber + ' - ' + unit.status}">Unit</option>
+    <option value="" th:text="#{equipment.units.noSpecific}">Без конкретной единицы</option>
+    <option th:each="unit : ${units}" th:value="${unit.id}" th:text="${unit.inventoryNumber + ' - ' + #messages.msg('enum.EquipmentUnitStatus.' + unit.status.name())}">Единица</option>
 </select>
 </body>
 </html>

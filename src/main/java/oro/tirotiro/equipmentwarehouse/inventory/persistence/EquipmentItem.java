@@ -85,7 +85,7 @@ public class EquipmentItem extends AuditedEntity {
 
     public void changeTotalQuantity(int totalQuantity) {
         if (totalQuantity < 0) {
-            throw new IllegalArgumentException("Total quantity must not be negative");
+            throw new IllegalArgumentException("Общее количество не должно быть отрицательным");
         }
         this.totalQuantity = totalQuantity;
     }

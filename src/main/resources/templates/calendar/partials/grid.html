@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
 <body>
 <section id="calendar-grid" th:fragment="calendarGrid" class="card">
-    <h2 th:text="${#temporals.format(startsOn, 'yyyy-MM-dd') + ' to ' + #temporals.format(endsOn, 'yyyy-MM-dd')}">Period</h2>
+    <h2 th:text="#{calendar.period(${#temporals.format(startsOn, 'yyyy-MM-dd')}, ${#temporals.format(endsOn, 'yyyy-MM-dd')})}">Период</h2>
     <table>
-        <thead><tr><th>Equipment</th><th>Category</th><th>Total</th><th>Booked</th><th>Available</th></tr></thead>
+        <thead><tr><th th:text="#{calendar.equipment}">Оборудование</th><th th:text="#{calendar.category}">Категория</th><th th:text="#{calendar.total}">Всего</th><th th:text="#{calendar.booked}">Забронировано</th><th th:text="#{calendar.available}">Доступно</th></tr></thead>
         <tbody>
         <tr th:each="item : ${calendar.items}">
-            <td th:text="${item.equipmentName}">Equipment</td>
-            <td th:text="${item.categoryName}">Category</td>
+            <td th:text="${item.equipmentName}">Оборудование</td>
+            <td th:text="${item.categoryName}">Категория</td>
             <td th:text="${item.total}">0</td>
             <td th:text="${item.booked}">0</td>
             <td><strong th:text="${item.available}">0</strong></td>
         </tr>
-        <tr th:if="${#lists.isEmpty(calendar.items)}"><td colspan="5" class="empty">No equipment for this period.</td></tr>
+        <tr th:if="${#lists.isEmpty(calendar.items)}"><td colspan="5" class="empty" th:text="#{calendar.empty}">Нет оборудования на выбранный период.</td></tr>
         </tbody>
     </table>
 </section>

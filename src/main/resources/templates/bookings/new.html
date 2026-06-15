@@ -1,29 +1,36 @@
 <!doctype html>
-<html lang="en" xmlns:th="https://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('New Booking')}"></head>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{bookings.form.title})}"></head>
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <main class="page narrow">
     <section th:replace="~{fragments/layout :: flash}"></section>
-    <h1>New Booking</h1>
+    <h1 th:text="#{bookings.form.heading}">Новое бронирование</h1>
     <p class="flash error" th:if="${error}" th:text="${error}"></p>
     <form th:action="@{/bookings}" th:object="${form}" method="post" class="card stack">
-        <label>Starts at <input type="datetime-local" th:field="*{startsAt}" required></label>
-        <label>Ends at <input type="datetime-local" th:field="*{endsAt}" required></label>
-        <label>Equipment
+        <label><span th:text="#{bookings.form.startsAt}">Начало</span> <input type="datetime-local" th:field="*{startsAt}" required>
+            <span class="field-error" th:if="${#fields.hasErrors('startsAt')}" th:errors="*{startsAt}">Укажите начало бронирования.</span>
+        </label>
+        <label><span th:text="#{bookings.form.endsAt}">Окончание</span> <input type="datetime-local" th:field="*{endsAt}" required>
+            <span class="field-error" th:if="${#fields.hasErrors('endsAt')}" th:errors="*{endsAt}">Укажите окончание бронирования.</span>
+        </label>
+        <label><span th:text="#{bookings.form.equipment}">Оборудование</span>
             <select th:field="*{equipmentItemId}" hx-get="/equipment/units" hx-target="#equipmentUnitId" hx-swap="outerHTML" required>
-                <option value="">Select equipment</option>
-                <option th:each="item : ${items}" th:value="${item.id}" th:text="${item.name + ' (' + item.trackingMode + ')'}">Item</option>
+                <option value="" th:text="#{bookings.form.selectEquipment}">Выберите оборудование</option>
+                <option th:each="item : ${items}" th:value="${item.id}" th:text="${item.name + ' (' + #messages.msg('enum.TrackingMode.' + item.trackingMode.name()) + ')'}">Позиция</option>
             </select>
+            <span class="field-error" th:if="${#fields.hasErrors('equipmentItemId')}" th:errors="*{equipmentItemId}">Выберите оборудование.</span>
         </label>
-        <label>Specific unit
+        <label><span th:text="#{bookings.form.specificUnit}">Конкретная единица</span>
             <select id="equipmentUnitId" th:field="*{equipmentUnitId}">
-                <option value="">No specific unit</option>
+                <option value="" th:text="#{equipment.units.noSpecific}">Без конкретной единицы</option>
             </select>
         </label>
-        <label>Quantity <input type="number" min="1" th:field="*{quantity}"></label>
-        <label>Comment <textarea th:field="*{comment}"></textarea></label>
-        <button type="submit">Create booking</button>
+        <label><span th:text="#{bookings.form.quantity}">Количество</span> <input type="number" min="1" th:field="*{quantity}">
+            <span class="field-error" th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}">Количество должно быть не меньше 1.</span>
+        </label>
+        <label><span th:text="#{bookings.form.comment}">Комментарий</span> <textarea th:field="*{comment}"></textarea></label>
+        <button type="submit" th:text="#{bookings.form.submit}">Создать бронирование</button>
     </form>
 </main>
 </body>

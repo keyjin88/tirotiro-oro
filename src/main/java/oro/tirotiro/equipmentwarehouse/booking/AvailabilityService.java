@@ -91,7 +91,7 @@ public class AvailabilityService {
             UUID ignoredBookingId) {
         validatePeriod(startsAt, endsAt);
         if (requestedLines == null || requestedLines.isEmpty()) {
-            throw new AvailabilityException("Booking must contain at least one line");
+            throw new AvailabilityException("Бронирование должно содержать хотя бы одну позицию");
         }
 
         Map<UUID, EquipmentItem> itemsById = lockedItems.stream()
@@ -104,7 +104,7 @@ public class AvailabilityService {
         for (RequestedLine line : requestedLines) {
             EquipmentItem item = itemsById.get(line.equipmentItemId());
             if (item == null || !item.isActive()) {
-                throw new AvailabilityException("Equipment item is not available for booking: " + line.equipmentItemId());
+                throw new AvailabilityException("Оборудование недоступно для бронирования: " + line.equipmentItemId());
             }
             if (line.equipmentUnitId() == null) {
                 validateQuantityLine(line, item);
@@ -120,12 +120,12 @@ public class AvailabilityService {
             int bookedQuantity = occupancy.quantityByItem.getOrDefault(itemId, 0);
             int availableQuantity = item.getTotalQuantity() - bookedQuantity;
             if (requestedQuantity > availableQuantity) {
-                throw new AvailabilityException("Insufficient quantity for equipment item: " + itemId);
+                throw new AvailabilityException("Недостаточно количества для оборудования: " + itemId);
             }
         });
         for (UUID requestedUnitId : requestedUnitIds) {
             if (occupancy.bookedUnitIds.contains(requestedUnitId)) {
-                throw new AvailabilityException("Equipment unit is already booked: " + requestedUnitId);
+                throw new AvailabilityException("Единица оборудования уже забронирована: " + requestedUnitId);
             }
         }
     }
@@ -136,16 +136,16 @@ public class AvailabilityService {
 
     public void validatePeriod(Instant startsAt, Instant endsAt) {
         if (startsAt == null || endsAt == null || !startsAt.isBefore(endsAt)) {
-            throw new IllegalArgumentException("Booking period must have startsAt before endsAt");
+            throw new IllegalArgumentException("Начало бронирования должно быть раньше окончания");
         }
     }
 
     private void validateQuantityLine(RequestedLine line, EquipmentItem item) {
         if (item.getTrackingMode() != TrackingMode.QUANTITY) {
-            throw new AvailabilityException("Unit-tracked items require a concrete equipment unit: " + item.getId());
+            throw new AvailabilityException("Для позиций с поштучным учетом нужно выбрать конкретную единицу оборудования: " + item.getId());
         }
         if (line.quantity() < 1) {
-            throw new AvailabilityException("Requested quantity must be positive");
+            throw new AvailabilityException("Запрошенное количество должно быть положительным");
         }
     }
 
@@ -155,20 +155,20 @@ public class AvailabilityService {
             Map<UUID, EquipmentUnit> unitsById,
             Set<UUID> requestedUnitIds) {
         if (item.getTrackingMode() != TrackingMode.UNIT) {
-            throw new AvailabilityException("Quantity-tracked items cannot specify equipment units: " + item.getId());
+            throw new AvailabilityException("Для позиций с количественным учетом нельзя указывать единицу оборудования: " + item.getId());
         }
         if (line.quantity() != 1) {
-            throw new AvailabilityException("Unit-tracked booking lines must have quantity 1");
+            throw new AvailabilityException("Для поштучного учета количество в строке бронирования должно быть 1");
         }
         EquipmentUnit unit = unitsById.get(line.equipmentUnitId());
         if (unit == null
                 || !unit.getEquipmentItem().getId().equals(item.getId())
                 || unit.isArchived()
                 || unit.getStatus() != EquipmentUnitStatus.AVAILABLE) {
-            throw new AvailabilityException("Equipment unit is not available for booking: " + line.equipmentUnitId());
+            throw new AvailabilityException("Единица оборудования недоступна для бронирования: " + line.equipmentUnitId());
         }
         if (!requestedUnitIds.add(unit.getId())) {
-            throw new AvailabilityException("Equipment unit requested more than once: " + unit.getId());
+            throw new AvailabilityException("Единица оборудования запрошена больше одного раза: " + unit.getId());
         }
     }
 
