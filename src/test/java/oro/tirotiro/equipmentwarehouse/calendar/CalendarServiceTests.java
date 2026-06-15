@@ -32,7 +32,10 @@ class CalendarServiceTests {
         CalendarService calendarService = new CalendarService(
                 itemRepository,
                 availabilityService,
-                new AppProperties(ZoneId.of("UTC"), new AppProperties.Security(false)));
+                new AppProperties(
+                        ZoneId.of("UTC"),
+                        new AppProperties.Security(false),
+                        new AppProperties.BootstrapAdmin(null, null, null)));
         when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(camera, light));
         when(availabilityService.getAvailability(List.of(camera.getId()), startsAt, endsAt)).thenReturn(List.of(
                 new AvailabilityService.ItemAvailability(camera.getId(), 3, 1, 2, List.of())));

@@ -1,75 +1,75 @@
-# Test Coverage Plan: Equipment Warehouse MVP
+# План тестового покрытия: MVP склада оборудования
 
-## Coverage Goal
+## Цель покрытия
 
-The MVP must maintain at least 60% line coverage for production Java code through the JaCoCo Maven `check` goal. The coverage gate is configured in `pom.xml` and runs during `mvn verify`; the build must fail when covered line ratio drops below `0.60`.
+MVP должен поддерживать покрытие строк рабочего Java-кода не ниже 60% через Maven-цель JaCoCo `check`. Порог покрытия настроен в `pom.xml` и выполняется во время `mvn verify`; сборка должна завершаться ошибкой, если доля покрытых строк опускается ниже `0.60`.
 
-## Coverage Gate Scope
+## Область действия порога покрытия
 
-The gate covers production code under `src/main/java`.
+Порог распространяется на рабочий код в `src/main/java`.
 
-The following code may be excluded from the coverage gate when it does not contain business behavior:
+Следующий код можно исключать из порога покрытия, если он не содержит бизнес-поведения:
 
-- generated code;
-- application bootstrap classes;
-- framework-only configuration classes;
-- configuration DTOs and metadata holders.
+- сгенерированный код;
+- классы bootstrap приложения;
+- классы конфигурации, содержащие только настройки фреймворка;
+- конфигурационные DTO и держатели метаданных.
 
-Coverage exclusions must stay narrow. Domain services, controllers, repositories, validators, authorization checks, and booking or availability rules are always in scope.
+Исключения из покрытия должны оставаться узкими. Доменные сервисы, контроллеры, репозитории, валидаторы, проверки авторизации, а также правила бронирования и доступности всегда входят в область покрытия.
 
-## Unit Tests
+## Модульные тесты
 
-Unit tests should be the first line of coverage for deterministic domain and service behavior. They should run during `mvn test` without PostgreSQL, Docker, browser automation, or external services.
+Модульные тесты должны быть первой линией покрытия для детерминированного поведения домена и сервисов. Они должны выполняться во время `mvn test` без PostgreSQL, Docker, браузерной автоматизации или внешних сервисов.
 
-Required unit coverage areas:
+Обязательные области модульного покрытия:
 
-- interval overlap detection using `existing.starts_at < requested.ends_at` and `existing.ends_at > requested.starts_at`;
-- quantity availability for tracked stock;
-- unit availability for individually tracked inventory units;
-- `BookingLine` rules, including positive quantities and quantity `1` for unit-specific lines;
-- service-level authorization, including role checks and `EQUIPMENT_CREATE`;
-- soft delete invariants for equipment items and units.
+- определение пересечения интервалов с использованием `existing.starts_at < requested.ends_at` и `existing.ends_at > requested.starts_at`;
+- доступность количества для учета складского остатка;
+- доступность единицы для индивидуально учитываемых инвентарных единиц;
+- правила `BookingLine`, включая положительное количество и количество `1` для строк с конкретной единицей;
+- авторизация на уровне сервисов, включая проверки ролей и `EQUIPMENT_CREATE`;
+- инварианты soft delete для позиций оборудования и единиц.
 
-## Integration Tests
+## Интеграционные тесты
 
-Integration tests should run during `mvn verify` through Maven Failsafe. They should use Testcontainers PostgreSQL so database behavior matches the production database as closely as possible.
+Интеграционные тесты должны выполняться во время `mvn verify` через Maven Failsafe. Они должны использовать Testcontainers PostgreSQL, чтобы поведение базы данных было максимально близко к production-базе.
 
-Required integration coverage areas:
+Обязательные области интеграционного покрытия:
 
-- Liquibase migrations apply cleanly to PostgreSQL;
-- repository mappings and constraints for users, permissions, equipment, bookings, and audit records;
-- successful booking creation;
-- insufficient stock rejection;
-- overlapping inventory unit rejection;
-- cancellation releases availability;
-- concurrent booking attempts with deterministic locking behavior.
+- миграции Liquibase корректно применяются к PostgreSQL;
+- маппинги репозиториев и ограничения для пользователей, прав, оборудования, бронирований и записей аудита;
+- успешное создание бронирования;
+- отказ при недостаточном остатке;
+- отказ при пересечении брони инвентарной единицы;
+- отмена освобождает доступность;
+- конкурентные попытки бронирования с детерминированным поведением блокировок.
 
-## Web And Security Tests
+## Web-тесты и тесты безопасности
 
-Web and security tests should use focused Spring MVC tests where possible, with full-context tests reserved for cross-cutting behavior. These tests should validate server-rendered HTML routes, form handling, CSRF, and authorization without depending on browser automation.
+Web-тесты и тесты безопасности по возможности должны использовать сфокусированные тесты Spring MVC, а тесты с полным контекстом оставлять для сквозного поведения. Эти тесты должны проверять HTML-маршруты с серверным рендерингом, обработку форм, CSRF и авторизацию без зависимости от браузерной автоматизации.
 
-Required web and security coverage areas:
+Обязательные области web-покрытия и покрытия безопасности:
 
-- login and logout;
-- admin-only route restrictions;
-- `EQUIPMENT_CREATE` access for equipment creation;
-- user versus admin booking visibility;
-- CSRF protection for mutating requests;
-- MVC form validation and error rendering.
+- вход и выход;
+- ограничения маршрутов только для администратора;
+- доступ `EQUIPMENT_CREATE` к созданию оборудования;
+- различия видимости бронирований для пользователя и администратора;
+- CSRF-защита для изменяющих запросов;
+- MVC-валидация форм и отображение ошибок.
 
-## UI Smoke Tests
+## Дымовые UI-тесты
 
-UI smoke tests are not the primary coverage source and should stay small. Their purpose is to catch broken user journeys after the server-rendered UI exists.
+Дымовые UI-тесты не являются основным источником покрытия и должны оставаться небольшими. Их цель - находить сломанные пользовательские сценарии после появления UI с серверным рендерингом.
 
-Required smoke flows:
+Обязательные дымовые сценарии:
 
-- catalog loads and displays equipment rows;
-- booking creation flow reaches confirmation or validation feedback;
-- admin equipment creation page submits valid data;
-- calendar period update refreshes the displayed availability.
+- каталог загружается и отображает строки оборудования;
+- сценарий создания бронирования доходит до подтверждения или сообщения валидации;
+- страница создания оборудования администратором отправляет валидные данные;
+- обновление периода календаря обновляет отображаемую доступность.
 
-## Coverage Ownership
+## Ответственность за покрытие
 
-Coverage work should start with the riskiest business areas: availability calculations, booking creation, booking modification, cancellation, concurrency, and authorization. Controllers should be covered with focused MVC tests that verify request handling and security boundaries rather than duplicating service logic.
+Работу над покрытием следует начинать с самых рискованных бизнес-областей: расчет доступности, создание бронирования, изменение бронирования, отмена, конкурентность и авторизация. Контроллеры следует покрывать сфокусированными MVC-тестами, которые проверяют обработку запросов и границы безопасности, а не дублируют сервисную логику.
 
-Every implementation phase that adds production behavior should add or update tests in the same change. If a phase temporarily cannot meet the 60% gate because the behavior is still skeletal, the blocker must be documented before merging and resolved before the MVP is considered complete.
+Каждая фаза реализации, добавляющая рабочее поведение, должна в том же изменении добавлять или обновлять тесты. Если фаза временно не может выполнить порог 60%, потому что поведение еще остается каркасным, блокер должен быть задокументирован до слияния и устранен до того, как MVP считается завершенным.

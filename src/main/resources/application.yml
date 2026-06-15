@@ -26,3 +26,7 @@ app:
   time-zone: ${APP_TIME_ZONE:Europe/Moscow}
   security:
     remember-me-enabled: ${APP_SECURITY_REMEMBER_ME_ENABLED:false}
+  bootstrap-admin:
+    email: ${APP_BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${APP_BOOTSTRAP_ADMIN_PASSWORD:}
+    name: ${APP_BOOTSTRAP_ADMIN_NAME:}

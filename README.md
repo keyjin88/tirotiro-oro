@@ -1,24 +1,36 @@
 # Tirotiro Oro Equipment Warehouse
 
-Spring Boot MVP for equipment inventory, availability, bookings, and administrative warehouse workflows.
+MVP на Spring Boot для учета оборудования, проверки доступности, бронирований и административных складских процессов.
 
-## Local Commands
+## Локальные команды
 
-Run the full verification suite, including integration tests and the JaCoCo coverage gate:
+Запустить полный набор проверок, включая интеграционные тесты и порог покрытия JaCoCo:
 
 ```sh
 mvn verify
 ```
 
-Build and run the application with PostgreSQL:
+Собрать и запустить приложение с PostgreSQL:
 
 ```sh
 docker compose up --build
 ```
 
-The application listens on `http://localhost:8080`. The compose stack creates a local PostgreSQL database named `equipment` with user `equipment_app` and password `change-me`.
+Приложение доступно на `http://localhost:8080`. Compose-стек создает локальную базу PostgreSQL с именем `equipment`, пользователем `equipment_app` и паролем `change-me`.
 
-Stop the stack:
+При первом запуске приложение создает администратора только если в базе еще нет пользователя с ролью `ADMIN`. Локальные значения по умолчанию для compose:
+
+```text
+APP_BOOTSTRAP_ADMIN_EMAIL=admin@example.local
+APP_BOOTSTRAP_ADMIN_PASSWORD=change-me-admin
+APP_BOOTSTRAP_ADMIN_NAME=Local Admin
+```
+
+Войдите на `http://localhost:8080/login` с этим email и паролем. Измените эти значения перед использованием общего или постоянного окружения. Если администратора нет, а `APP_BOOTSTRAP_ADMIN_EMAIL` или `APP_BOOTSTRAP_ADMIN_PASSWORD` не задана, запуск завершится с понятной ошибкой bootstrap; после появления администратора bootstrap-настройки игнорируются.
+
+Если стек уже запускался до добавления bootstrap-администратора, пересоберите образ командой `docker compose up --build`. Если в сохраненной локальной базе уже есть старый пользователь с ролью `ADMIN`, но его пароль неизвестен, сбросьте локальные данные командой `docker compose down -v`, затем снова выполните `docker compose up --build`. Команда `down -v` удаляет локальный volume PostgreSQL и все тестовые данные.
+
+Остановить стек:
 
 ```sh
 docker compose down

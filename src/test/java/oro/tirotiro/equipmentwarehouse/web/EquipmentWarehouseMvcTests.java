@@ -242,7 +242,10 @@ class EquipmentWarehouseMvcTests {
 
         @Bean
         AppProperties appProperties() {
-            return new AppProperties(ZoneId.of("UTC"), new AppProperties.Security(false));
+            return new AppProperties(
+                    ZoneId.of("UTC"),
+                    new AppProperties.Security(false),
+                    new AppProperties.BootstrapAdmin(null, null, null));
         }
 
         @Bean

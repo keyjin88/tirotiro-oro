@@ -37,7 +37,10 @@ import oro.tirotiro.equipmentwarehouse.inventory.persistence.TrackingMode;
         "spring.jpa.hibernate.ddl-auto=validate",
         "spring.liquibase.enabled=true",
         "app.time-zone=UTC",
-        "app.security.remember-me-enabled=false"
+        "app.security.remember-me-enabled=false",
+        "app.bootstrap-admin.email=bootstrap-it@example.com",
+        "app.bootstrap-admin.password=secret",
+        "app.bootstrap-admin.name=Bootstrap IT"
 })
 class EquipmentWarehousePostgresIT {
 
