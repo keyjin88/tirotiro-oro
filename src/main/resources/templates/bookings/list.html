@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Bookings')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <div class="page-title">
+        <div>
+            <h1>Bookings</h1>
+            <p class="muted">Review visible bookings and cancel future bookings where allowed.</p>
+        </div>
+        <a class="button" th:href="@{/bookings/new}">New booking</a>
+    </div>
+    <section th:replace="~{bookings/partials/table :: bookingsTable}"></section>
+</main>
+</body>
+</html>

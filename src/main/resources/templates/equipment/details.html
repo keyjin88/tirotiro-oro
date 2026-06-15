@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${item.name})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <section th:replace="~{equipment/partials/details :: equipmentDetails}"></section>
+</main>
+</body>
+</html>

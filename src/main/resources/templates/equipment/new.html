@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Add Equipment')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page narrow">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <h1>Add Equipment</h1>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+    <form th:action="@{/equipment}" th:object="${form}" method="post" class="card stack">
+        <label>Category
+            <select th:field="*{categoryId}" required>
+                <option value="">Select category</option>
+                <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Category</option>
+            </select>
+        </label>
+        <label>Name <input th:field="*{name}" required></label>
+        <label>Manufacturer <input th:field="*{manufacturer}"></label>
+        <label>Model <input th:field="*{model}"></label>
+        <label>Description <textarea th:field="*{description}"></textarea></label>
+        <label>Tracking mode
+            <select th:field="*{trackingMode}">
+                <option th:each="mode : ${trackingModes}" th:value="${mode}" th:text="${mode}">QUANTITY</option>
+            </select>
+        </label>
+        <label>Total quantity <input type="number" min="0" th:field="*{totalQuantity}"></label>
+        <button type="submit">Create equipment</button>
+    </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<body>
+<div id="availability-summary" th:fragment="availabilitySummary" class="notice">
+    <span th:if="${availability == null}">Availability could not be calculated.</span>
+    <span th:if="${availability != null}" th:text="${'Available: ' + availability.available + ' of ' + availability.total}">Available</span>
+</div>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<body>
+<section th:fragment="equipmentDetails" class="grid two">
+    <article class="card">
+        <a th:href="@{/equipment}">Back to catalog</a>
+        <h1 th:text="${item.name}">Equipment</h1>
+        <p class="muted" th:text="${item.description ?: 'No description yet.'}">Description</p>
+        <dl class="details">
+            <dt>Category</dt><dd th:text="${item.category.name}">Category</dd>
+            <dt>Manufacturer</dt><dd th:text="${item.manufacturer ?: '-'}">-</dd>
+            <dt>Model</dt><dd th:text="${item.model ?: '-'}">-</dd>
+            <dt>Tracking</dt><dd th:text="${item.trackingMode}">QUANTITY</dd>
+            <dt>Total quantity</dt><dd th:text="${item.totalQuantity}">1</dd>
+        </dl>
+        <a class="button" th:href="@{/bookings/new(equipmentItemId=${item.id})}">Book this item</a>
+    </article>
+    <article class="card">
+        <h2>Units</h2>
+        <table>
+            <thead><tr><th>Inventory #</th><th>Status</th><th>Condition</th></tr></thead>
+            <tbody>
+            <tr th:each="unit : ${units}">
+                <td th:text="${unit.inventoryNumber}">INV-1</td>
+                <td><span class="pill" th:text="${unit.status}">AVAILABLE</span></td>
+                <td th:text="${unit.condition}">Ready</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(units)}"><td colspan="3" class="empty">No units registered.</td></tr>
+            </tbody>
+        </table>
+    </article>
+</section>
+</body>
+</html>

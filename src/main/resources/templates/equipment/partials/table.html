@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<body>
+<section id="equipment-table" th:fragment="equipmentTable" class="card">
+    <table>
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Tracking</th>
+            <th>Total</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${items}">
+            <td>
+                <strong th:text="${item.name}">Camera</strong>
+                <div class="muted" th:text="${item.manufacturer ?: ''}">Manufacturer</div>
+            </td>
+            <td th:text="${item.category.name}">Category</td>
+            <td><span class="pill" th:text="${item.trackingMode}">QUANTITY</span></td>
+            <td th:text="${item.totalQuantity}">1</td>
+            <td><a th:href="@{/equipment/{id}(id=${item.id})}">Details</a></td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(items)}">
+            <td colspan="5" class="empty">No active equipment yet.</td>
+        </tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>

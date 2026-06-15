@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Admin Equipment')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <div class="page-title">
+        <div>
+            <h1>Admin Equipment</h1>
+            <p class="muted">Manage catalog setup, categories, and unit-tracked inventory.</p>
+        </div>
+        <a class="button secondary" th:href="@{/admin/users}">Manage users</a>
+    </div>
+    <section class="grid two">
+        <form th:action="@{/admin/categories}" th:object="${categoryForm}" method="post" class="card stack">
+            <h2>Create category</h2>
+            <label>Name <input th:field="*{name}" required></label>
+            <label>Description <textarea th:field="*{description}"></textarea></label>
+            <button type="submit">Create category</button>
+        </form>
+        <form th:action="@{/admin/equipment}" th:object="${equipmentForm}" method="post" class="card stack">
+            <h2>Create equipment</h2>
+            <label>Category
+                <select th:field="*{categoryId}" required>
+                    <option value="">Select category</option>
+                    <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Category</option>
+                </select>
+            </label>
+            <label>Name <input th:field="*{name}" required></label>
+            <label>Manufacturer <input th:field="*{manufacturer}"></label>
+            <label>Model <input th:field="*{model}"></label>
+            <label>Tracking
+                <select th:field="*{trackingMode}">
+                    <option th:each="mode : ${trackingModes}" th:value="${mode}" th:text="${mode}">QUANTITY</option>
+                </select>
+            </label>
+            <label>Total quantity <input type="number" min="0" th:field="*{totalQuantity}"></label>
+            <button type="submit">Create equipment</button>
+        </form>
+    </section>
+    <section class="card">
+        <h2>Catalog administration</h2>
+        <table>
+            <thead><tr><th>Name</th><th>Category</th><th>Tracking</th><th>Active</th><th>Add unit</th><th>Archive</th></tr></thead>
+            <tbody>
+            <tr th:each="item : ${items}">
+                <td><a th:href="@{/equipment/{id}(id=${item.id})}" th:text="${item.name}">Item</a></td>
+                <td th:text="${item.category.name}">Category</td>
+                <td th:text="${item.trackingMode}">QUANTITY</td>
+                <td th:text="${item.active}">true</td>
+                <td>
+                    <form th:if="${item.trackingMode.name() == 'UNIT' and item.active}" th:action="@{/admin/equipment/{id}/units(id=${item.id})}" th:object="${unitForm}" method="post" class="inline-form wrap">
+                        <input th:field="*{inventoryNumber}" placeholder="Inventory #" required>
+                        <input th:field="*{condition}" placeholder="Condition" required>
+                        <select th:field="*{status}"><option th:each="status : ${unitStatuses}" th:value="${status}" th:text="${status}">AVAILABLE</option></select>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit">Add unit</button>
+                    </form>
+                </td>
+                <td>
+                    <form th:if="${item.active}" th:action="@{/admin/equipment/{id}/delete(id=${item.id})}" method="post" class="inline-form">
+                        <input name="reason" placeholder="Reason" required>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit" class="danger">Archive</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

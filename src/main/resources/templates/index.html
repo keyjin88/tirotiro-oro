@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Equipment Warehouse')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <h1>Equipment Warehouse</h1>
+    <p class="muted">Open the catalog to start booking equipment.</p>
+    <a class="button" th:href="@{/equipment}">View catalog</a>
+</main>
+</body>
+</html>

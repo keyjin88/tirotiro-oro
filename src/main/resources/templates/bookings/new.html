@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('New Booking')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page narrow">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <h1>New Booking</h1>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+    <form th:action="@{/bookings}" th:object="${form}" method="post" class="card stack">
+        <label>Starts at <input type="datetime-local" th:field="*{startsAt}" required></label>
+        <label>Ends at <input type="datetime-local" th:field="*{endsAt}" required></label>
+        <label>Equipment
+            <select th:field="*{equipmentItemId}" hx-get="/equipment/units" hx-target="#equipmentUnitId" hx-swap="outerHTML" required>
+                <option value="">Select equipment</option>
+                <option th:each="item : ${items}" th:value="${item.id}" th:text="${item.name + ' (' + item.trackingMode + ')'}">Item</option>
+            </select>
+        </label>
+        <label>Specific unit
+            <select id="equipmentUnitId" th:field="*{equipmentUnitId}">
+                <option value="">No specific unit</option>
+            </select>
+        </label>
+        <label>Quantity <input type="number" min="1" th:field="*{quantity}"></label>
+        <label>Comment <textarea th:field="*{comment}"></textarea></label>
+        <button type="submit">Create booking</button>
+    </form>
+</main>
+</body>
+</html>

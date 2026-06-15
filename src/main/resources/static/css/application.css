@@ -1,0 +1,211 @@
+:root {
+    color-scheme: light;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #f8fafc;
+    color: #172033;
+}
+
+a {
+    color: #1d4ed8;
+    text-decoration: none;
+}
+
+button,
+.button {
+    align-items: center;
+    background: #1d4ed8;
+    border: 0;
+    border-radius: 0.55rem;
+    color: white;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-weight: 650;
+    gap: 0.35rem;
+    padding: 0.65rem 0.9rem;
+}
+
+button.secondary,
+.button.secondary {
+    background: #e2e8f0;
+    color: #172033;
+}
+
+button.danger,
+.button.danger {
+    background: #b91c1c;
+}
+
+input,
+select,
+textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.45rem;
+    box-sizing: border-box;
+    font: inherit;
+    padding: 0.55rem 0.65rem;
+    width: 100%;
+}
+
+textarea {
+    min-height: 6rem;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th,
+td {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    color: #475569;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.page {
+    margin: 0 auto;
+    max-width: 72rem;
+    padding: 2rem 1.5rem 3rem;
+}
+
+.page.narrow {
+    max-width: 44rem;
+}
+
+.topbar {
+    align-items: center;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    gap: 1.25rem;
+    padding: 0.85rem 1.5rem;
+}
+
+.brand {
+    color: #172033;
+    font-weight: 750;
+}
+
+.nav {
+    display: flex;
+    flex: 1;
+    gap: 1rem;
+}
+
+.logout {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.page-title {
+    align-items: start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.card,
+.auth-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+    padding: 1rem;
+}
+
+.auth-card {
+    margin: 8vh auto;
+    max-width: 24rem;
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.grid.two {
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
+.stack {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.filters,
+.inline-form {
+    align-items: end;
+    display: flex;
+    gap: 0.65rem;
+}
+
+.inline-form.wrap {
+    flex-wrap: wrap;
+}
+
+.inline-form input,
+.inline-form select {
+    min-width: 8rem;
+}
+
+.muted {
+    color: #64748b;
+}
+
+.flash,
+.notice {
+    border-radius: 0.55rem;
+    margin: 0.75rem 0;
+    padding: 0.75rem 0.9rem;
+}
+
+.flash.success,
+.notice {
+    background: #dcfce7;
+    color: #14532d;
+}
+
+.flash.error {
+    background: #fee2e2;
+    color: #7f1d1d;
+}
+
+.pill {
+    background: #e0f2fe;
+    border-radius: 999px;
+    color: #075985;
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0.1rem;
+    padding: 0.2rem 0.5rem;
+}
+
+.details {
+    display: grid;
+    gap: 0.4rem 1rem;
+    grid-template-columns: max-content 1fr;
+}
+
+.details dt {
+    color: #64748b;
+}
+
+.empty {
+    color: #64748b;
+    text-align: center;
+}

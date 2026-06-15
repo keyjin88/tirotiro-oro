@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<body>
+<select id="equipmentUnitId" name="equipmentUnitId" th:fragment="unitOptions">
+    <option value="">No specific unit</option>
+    <option th:each="unit : ${units}" th:value="${unit.id}" th:text="${unit.inventoryNumber + ' - ' + unit.status}">Unit</option>
+</select>
+</body>
+</html>

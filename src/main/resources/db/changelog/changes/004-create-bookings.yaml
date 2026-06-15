@@ -1,0 +1,160 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-bookings
+      author: cursor
+      changes:
+        - createTable:
+            tableName: bookings
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: starts_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ends_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comment
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cancelled_at
+                  type: timestamptz
+              - column:
+                  name: cancelled_by
+                  type: uuid
+              - column:
+                  name: cancel_reason
+                  type: text
+        - addForeignKeyConstraint:
+            baseTableName: bookings
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_bookings_user
+        - addForeignKeyConstraint:
+            baseTableName: bookings
+            baseColumnNames: cancelled_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_bookings_cancelled_by
+        - sql:
+            sql: alter table bookings add constraint chk_bookings_period check (starts_at < ends_at)
+        - sql:
+            sql: alter table bookings add constraint chk_bookings_status check (status in ('BOOKED', 'CANCELLED'))
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_period
+            columns:
+              - column:
+                  name: starts_at
+              - column:
+                  name: ends_at
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_user_id
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_status
+            columns:
+              - column:
+                  name: status
+        - createTable:
+            tableName: booking_lines
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: booking_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: equipment_item_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: equipment_unit_id
+                  type: uuid
+              - column:
+                  name: quantity
+                  type: int
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: booking_lines
+            baseColumnNames: booking_id
+            referencedTableName: bookings
+            referencedColumnNames: id
+            onDelete: CASCADE
+            constraintName: fk_booking_lines_booking
+        - addForeignKeyConstraint:
+            baseTableName: booking_lines
+            baseColumnNames: equipment_item_id
+            referencedTableName: equipment_items
+            referencedColumnNames: id
+            constraintName: fk_booking_lines_equipment_item
+        - addForeignKeyConstraint:
+            baseTableName: booking_lines
+            baseColumnNames: equipment_unit_id
+            referencedTableName: equipment_units
+            referencedColumnNames: id
+            constraintName: fk_booking_lines_equipment_unit
+        - sql:
+            sql: alter table booking_lines add constraint chk_booking_lines_quantity_positive check (quantity > 0)
+        - sql:
+            sql: alter table booking_lines add constraint chk_booking_lines_unit_quantity check (equipment_unit_id is null or quantity = 1)
+        - createIndex:
+            tableName: booking_lines
+            indexName: idx_booking_lines_booking_id
+            columns:
+              - column:
+                  name: booking_id
+        - createIndex:
+            tableName: booking_lines
+            indexName: idx_booking_lines_equipment_item_id
+            columns:
+              - column:
+                  name: equipment_item_id
+        - createIndex:
+            tableName: booking_lines
+            indexName: idx_booking_lines_equipment_unit_id
+            columns:
+              - column:
+                  name: equipment_unit_id

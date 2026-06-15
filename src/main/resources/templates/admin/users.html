@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Admin Users')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <div class="page-title">
+        <div>
+            <h1>Admin Users</h1>
+            <p class="muted">Review accounts and grant or revoke MVP permissions.</p>
+        </div>
+        <a class="button secondary" th:href="@{/admin/equipment}">Manage equipment</a>
+    </div>
+    <section class="card">
+        <table>
+            <thead><tr><th>User</th><th>Roles</th><th>Permissions</th><th>Actions</th></tr></thead>
+            <tbody>
+            <tr th:each="user : ${users}">
+                <td>
+                    <strong th:text="${user.displayName}">User</strong>
+                    <div class="muted" th:text="${user.email}">email@example.com</div>
+                </td>
+                <td><span class="pill" th:each="role : ${user.roles}" th:text="${role.code}">USER</span></td>
+                <td><span class="pill" th:each="grant : ${user.permissionGrants}" th:text="${grant.permission.code}">EQUIPMENT_CREATE</span></td>
+                <td>
+                    <form th:each="code : ${permissionCodes}" th:action="@{/admin/users/{id}/permissions(id=${user.id})}" method="post" class="inline-form">
+                        <input type="hidden" name="permissionCode" th:value="${code}">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button name="action" value="grant" type="submit">Grant <span th:text="${code}">Permission</span></button>
+                        <button name="action" value="revoke" type="submit" class="danger">Revoke</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

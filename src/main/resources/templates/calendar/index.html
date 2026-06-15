@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Availability Calendar')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <h1>Availability Calendar</h1>
+    <form class="filters card" hx-get="/calendar/partial" hx-target="#calendar-grid" hx-swap="outerHTML">
+        <label>Start <input type="date" name="startsOn" th:value="${startsOn}" required></label>
+        <label>End <input type="date" name="endsOn" th:value="${endsOn}" required></label>
+        <label>Category
+            <select name="categoryId">
+                <option value="">All categories</option>
+                <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Category</option>
+            </select>
+        </label>
+        <button type="submit">Update</button>
+    </form>
+    <section th:replace="~{calendar/partials/grid :: calendarGrid}"></section>
+</main>
+</body>
+</html>
