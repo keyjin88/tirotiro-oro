@@ -1,0 +1,70 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-local-demo-data
+      author: cursor
+      contextFilter: local
+      dbms: postgresql
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              insert into users (id, email, password_hash, display_name, enabled, created_at, updated_at)
+              values
+                ('10000000-0000-0000-0000-000000000001', 'producer@example.local', '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi11sO/P/XiS0LLq77xVZg1W1U28z8e', 'Ирина Продюсер', true, now(), now()),
+                ('10000000-0000-0000-0000-000000000002', 'operator@example.local', '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi11sO/P/XiS0LLq77xVZg1W1U28z8e', 'Алексей Оператор', true, now(), now()),
+                ('10000000-0000-0000-0000-000000000003', 'sound@example.local', '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi11sO/P/XiS0LLq77xVZg1W1U28z8e', 'Мария Звукорежиссер', true, now(), now())
+              on conflict (id) do nothing;
+
+              insert into user_roles (user_id, role_id)
+              select seeded_users.id, roles.id
+              from (values
+                ('10000000-0000-0000-0000-000000000001'::uuid),
+                ('10000000-0000-0000-0000-000000000002'::uuid),
+                ('10000000-0000-0000-0000-000000000003'::uuid)
+              ) as seeded_users(id)
+              join roles on roles.code = 'USER'
+              on conflict do nothing;
+
+              insert into equipment_categories (id, name, description, archived, created_at, updated_at)
+              values
+                ('20000000-0000-0000-0000-000000000001', 'Камеры', 'Камеры и комплекты для съемки', false, now(), now()),
+                ('20000000-0000-0000-0000-000000000002', 'Свет', 'Осветительное оборудование', false, now(), now()),
+                ('20000000-0000-0000-0000-000000000003', 'Звук', 'Микрофоны, рекордеры и аксессуары', false, now(), now())
+              on conflict (id) do nothing;
+
+              insert into equipment_items (id, category_id, name, manufacturer, model, description, tracking_mode, total_quantity, active, created_at, updated_at)
+              values
+                ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'Sony FX6', 'Sony', 'FX6', 'Полнокадровая кинокамера', 'UNIT', 0, true, now(), now()),
+                ('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 'Штатив Manfrotto', 'Manfrotto', '504X', 'Штативы для камерных комплектов', 'QUANTITY', 5, true, now(), now()),
+                ('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000002', 'Aputure 300d II', 'Aputure', '300d II', 'Светодиодный источник постоянного света', 'UNIT', 0, true, now(), now()),
+                ('30000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000003', 'Петличный микрофон', 'Sennheiser', 'ME 2', 'Комплект петличных микрофонов', 'QUANTITY', 8, true, now(), now())
+              on conflict (id) do nothing;
+
+              insert into equipment_units (id, equipment_item_id, inventory_number, serial_number, condition, status, notes, archived, created_at, updated_at)
+              values
+                ('40000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 'CAM-FX6-001', 'FX6-001', 'Хорошее', 'AVAILABLE', 'Основной комплект', false, now(), now()),
+                ('40000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', 'CAM-FX6-002', 'FX6-002', 'Хорошее', 'AVAILABLE', 'Резервный комплект', false, now(), now()),
+                ('40000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000003', 'LIGHT-300D-001', '300D-001', 'Хорошее', 'AVAILABLE', null, false, now(), now()),
+                ('40000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000003', 'LIGHT-300D-002', '300D-002', 'Требует проверки', 'MAINTENANCE', 'Проверить крепление', false, now(), now())
+              on conflict (id) do nothing;
+
+              insert into bookings (id, user_id, starts_at, ends_at, status, comment, created_at, updated_at)
+              values
+                ('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', date_trunc('month', current_date)::timestamptz + interval '2 days 10 hours', date_trunc('month', current_date)::timestamptz + interval '2 days 14 hours', 'BOOKED', 'Интервью в студии', now(), now()),
+                ('50000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', date_trunc('month', current_date)::timestamptz + interval '5 days 9 hours', date_trunc('month', current_date)::timestamptz + interval '6 days 18 hours', 'BOOKED', 'Съемка короткого ролика', now(), now()),
+                ('50000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000003', date_trunc('month', current_date)::timestamptz + interval '12 days 11 hours', date_trunc('month', current_date)::timestamptz + interval '12 days 16 hours', 'BOOKED', 'Запись подкаста', now(), now()),
+                ('50000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', date_trunc('month', current_date)::timestamptz + interval '18 days 8 hours', date_trunc('month', current_date)::timestamptz + interval '20 days 20 hours', 'BOOKED', 'Выездная съемка', now(), now()),
+                ('50000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000002', date_trunc('month', current_date)::timestamptz + interval '24 days 13 hours', date_trunc('month', current_date)::timestamptz + interval '24 days 17 hours', 'BOOKED', 'Тест оборудования', now(), now())
+              on conflict (id) do nothing;
+
+              insert into booking_lines (id, booking_id, equipment_item_id, equipment_unit_id, quantity)
+              values
+                ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 1),
+                ('60000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000004', null, 2),
+                ('60000000-0000-0000-0000-000000000003', '50000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 1),
+                ('60000000-0000-0000-0000-000000000004', '50000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000002', null, 2),
+                ('60000000-0000-0000-0000-000000000005', '50000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000004', null, 4),
+                ('60000000-0000-0000-0000-000000000006', '50000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000003', 1),
+                ('60000000-0000-0000-0000-000000000007', '50000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000002', null, 1),
+                ('60000000-0000-0000-0000-000000000008', '50000000-0000-0000-0000-000000000005', '30000000-0000-0000-0000-000000000004', null, 1)
+              on conflict (id) do nothing;

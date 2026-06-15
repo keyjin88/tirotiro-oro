@@ -25,6 +25,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/equipment
       SPRING_DATASOURCE_USERNAME: equipment_app
       SPRING_DATASOURCE_PASSWORD: change-me
+      SPRING_LIQUIBASE_CONTEXTS: local
       APP_BOOTSTRAP_ADMIN_EMAIL: admin@example.local
       APP_BOOTSTRAP_ADMIN_PASSWORD: change-me-admin
       APP_BOOTSTRAP_ADMIN_NAME: Local Admin

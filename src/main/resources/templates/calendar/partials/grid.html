@@ -1,21 +1,46 @@
 <!doctype html>
 <html lang="ru" xmlns:th="https://www.thymeleaf.org">
 <body>
-<section id="calendar-grid" th:fragment="calendarGrid" class="card">
-    <h2 th:text="#{calendar.period(${#temporals.format(startsOn, 'yyyy-MM-dd')}, ${#temporals.format(endsOn, 'yyyy-MM-dd')})}">Период</h2>
-    <table>
-        <thead><tr><th th:text="#{calendar.equipment}">Оборудование</th><th th:text="#{calendar.category}">Категория</th><th th:text="#{calendar.total}">Всего</th><th th:text="#{calendar.booked}">Забронировано</th><th th:text="#{calendar.available}">Доступно</th></tr></thead>
-        <tbody>
-        <tr th:each="item : ${calendar.items}">
-            <td th:text="${item.equipmentName}">Оборудование</td>
-            <td th:text="${item.categoryName}">Категория</td>
-            <td th:text="${item.total}">0</td>
-            <td th:text="${item.booked}">0</td>
-            <td><strong th:text="${item.available}">0</strong></td>
-        </tr>
-        <tr th:if="${#lists.isEmpty(calendar.items)}"><td colspan="5" class="empty" th:text="#{calendar.empty}">Нет оборудования на выбранный период.</td></tr>
-        </tbody>
-    </table>
+<section id="calendar-grid" th:fragment="calendarGrid" class="calendar-panel card">
+    <div class="calendar-toolbar">
+        <a class="button secondary"
+           th:attr="hx-get=@{/calendar/partial(month=${calendar.previousMonth})}"
+           hx-target="#calendar-grid"
+           hx-swap="outerHTML"
+           th:href="@{/calendar(month=${calendar.previousMonth})}"
+           th:text="#{calendar.previousMonth}">Предыдущий месяц</a>
+        <div>
+            <h2 th:text="${#temporals.format(calendar.firstDay, 'LLLL yyyy')}">Июнь 2026</h2>
+            <p class="muted" th:text="#{calendar.monthSummary(${#temporals.format(calendar.firstDay, 'dd.MM.yyyy')}, ${#temporals.format(calendar.lastDay, 'dd.MM.yyyy')})}">Период месяца</p>
+        </div>
+        <a class="button secondary"
+           th:attr="hx-get=@{/calendar/partial(month=${calendar.nextMonth})}"
+           hx-target="#calendar-grid"
+           hx-swap="outerHTML"
+           th:href="@{/calendar(month=${calendar.nextMonth})}"
+           th:text="#{calendar.nextMonth}">Следующий месяц</a>
+    </div>
+    <form class="filters calendar-jump"
+          hx-get="/calendar/partial"
+          hx-target="#calendar-grid"
+          hx-swap="outerHTML">
+        <label>
+            <span th:text="#{calendar.jumpToMonth}">Перейти к месяцу</span>
+            <input type="month" name="month" th:value="${calendar.month}" required>
+        </label>
+        <button type="submit" th:text="#{calendar.jump}">Перейти</button>
+    </form>
+    <div class="calendar-tiles" th:if="${!#lists.isEmpty(calendar.days)}">
+        <a th:each="day : ${calendar.days}"
+           class="calendar-tile"
+           th:classappend="${day.hasBookings()} ? ' has-bookings' : ' no-bookings'"
+           th:href="@{/calendar/day/{date}(date=${day.date})}">
+            <span class="calendar-tile-weekday" th:text="${day.weekdayName}">пн</span>
+            <strong class="calendar-tile-date" th:text="${#temporals.format(day.date, 'd')}">1</strong>
+            <span class="pill" th:if="${day.hasBookings()}" th:text="#{calendar.bookingCount(${day.bookingCount})}">Бронирований: 1</span>
+            <span class="muted" th:if="${!day.hasBookings()}" th:text="#{calendar.noBookings}">Нет бронирований</span>
+        </a>
+    </div>
 </section>
 </body>
 </html>

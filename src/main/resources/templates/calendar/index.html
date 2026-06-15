@@ -4,18 +4,12 @@
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <main class="page">
-    <h1 th:text="#{calendar.heading}">Календарь доступности</h1>
-    <form class="filters card" hx-get="/calendar/partial" hx-target="#calendar-grid" hx-swap="outerHTML">
-        <label><span th:text="#{calendar.start}">Начало</span> <input type="date" name="startsOn" th:value="${startsOn}" required></label>
-        <label><span th:text="#{calendar.end}">Окончание</span> <input type="date" name="endsOn" th:value="${endsOn}" required></label>
-        <label><span th:text="#{calendar.category}">Категория</span>
-            <select name="categoryId">
-                <option value="" th:text="#{calendar.allCategories}">Все категории</option>
-                <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Категория</option>
-            </select>
-        </label>
-        <button type="submit" th:text="#{calendar.update}">Обновить</button>
-    </form>
+    <div class="page-title">
+        <div>
+            <h1 th:text="#{calendar.heading}">Календарь бронирований</h1>
+            <p class="muted" th:text="#{calendar.subtitle}">Выберите день, чтобы открыть подробности бронирований.</p>
+        </div>
+    </div>
     <section th:replace="~{calendar/partials/grid :: calendarGrid}"></section>
 </main>
 </body>

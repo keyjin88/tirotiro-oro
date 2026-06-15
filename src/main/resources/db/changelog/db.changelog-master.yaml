@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changes/004-create-bookings.yaml
   - include:
       file: db/changelog/changes/005-create-audit-log.yaml
+  - include:
+      file: db/changelog/changes/006-local-demo-data.yaml

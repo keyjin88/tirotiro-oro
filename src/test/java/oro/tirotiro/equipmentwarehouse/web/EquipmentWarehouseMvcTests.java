@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -330,24 +331,23 @@ class EquipmentWarehouseMvcTests {
     }
 
     @Test
-    void calendarPartialRendersSelectedPeriodAndAvailability() throws Exception {
-        Instant startsAt = Instant.parse("2026-06-15T00:00:00Z");
-        Instant endsAt = Instant.parse("2026-06-17T00:00:00Z");
-        CalendarService.CalendarView view = new CalendarService.CalendarView(
-                startsAt,
-                endsAt,
-                List.of(new CalendarService.CalendarItem(UUID.randomUUID(), "Grip", "Tripod", "QUANTITY", 2, 1, 1)),
-                List.of(new CalendarService.CalendarDay(LocalDate.parse("2026-06-15"), startsAt, startsAt.plusSeconds(86400))));
-        when(categoryRepository.findAll()).thenReturn(List.of());
-        when(calendarService.availabilityCalendar(startsAt, endsAt, null)).thenReturn(view);
+    void calendarPartialRendersSelectedMonthTilesAndBookingCounts() throws Exception {
+        YearMonth month = YearMonth.parse("2026-06");
+        CalendarService.MonthCalendar view = new CalendarService.MonthCalendar(
+                month,
+                month.minusMonths(1),
+                month.plusMonths(1),
+                month.atDay(1),
+                month.atEndOfMonth(),
+                List.of(new CalendarService.CalendarDay(LocalDate.parse("2026-06-15"), "пн", 2)));
+        when(calendarService.monthCalendar(month)).thenReturn(view);
 
         mockMvc.perform(get("/calendar/partial")
                 .with(user("viewer").roles("USER"))
-                .param("startsOn", "2026-06-15")
-                .param("endsOn", "2026-06-16"))
+                .param("month", "2026-06"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-06-15 — 2026-06-16")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Tripod")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Бронирований: 2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/calendar/day/2026-06-15")));
     }
 
     private EquipmentCategory category(String name) {

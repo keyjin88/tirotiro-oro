@@ -18,6 +18,12 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     @EntityGraph(attributePaths = {"user", "lines", "lines.equipmentItem", "lines.equipmentUnit"})
     List<Booking> findAllByOrderByStartsAtDesc();
 
+    @EntityGraph(attributePaths = {"user", "lines", "lines.equipmentItem", "lines.equipmentUnit"})
+    List<Booking> findByStatusAndStartsAtLessThanAndEndsAtGreaterThanOrderByStartsAtAsc(
+            BookingStatus status,
+            Instant endsAt,
+            Instant startsAt);
+
     @Query("""
             select distinct booking
             from Booking booking

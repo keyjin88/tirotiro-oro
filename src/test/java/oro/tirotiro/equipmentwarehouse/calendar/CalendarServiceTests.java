@@ -4,56 +4,113 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.Booking;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingLine;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingRepository;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingStatus;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
-import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.TrackingMode;
 
 class CalendarServiceTests {
 
     @Test
-    void buildsCalendarForSelectedCategoryAndMapsAvailability() {
-        EquipmentItem camera = item("Cameras", "Camera", TrackingMode.QUANTITY);
-        EquipmentItem light = item("Lights", "Light", TrackingMode.UNIT);
-        Instant startsAt = Instant.parse("2026-06-15T00:00:00Z");
-        Instant endsAt = Instant.parse("2026-06-17T00:00:00Z");
-        EquipmentItemRepository itemRepository = mock(EquipmentItemRepository.class);
-        AvailabilityService availabilityService = mock(AvailabilityService.class);
+    void buildsCurrentMonthTilesWithBookingCountsPerDay() {
         CalendarService calendarService = new CalendarService(
-                itemRepository,
-                availabilityService,
-                new AppProperties(
-                        ZoneId.of("UTC"),
-                        new AppProperties.Security(false),
-                        new AppProperties.BootstrapAdmin(null, null, null)));
-        when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(camera, light));
-        when(availabilityService.getAvailability(List.of(camera.getId()), startsAt, endsAt)).thenReturn(List.of(
-                new AvailabilityService.ItemAvailability(camera.getId(), 3, 1, 2, List.of())));
+                bookingRepositoryWith(
+                        booking("2026-06-02T10:00:00Z", "2026-06-02T12:00:00Z"),
+                        booking("2026-06-05T09:00:00Z", "2026-06-07T18:00:00Z")),
+                Clock.fixed(Instant.parse("2026-06-15T08:00:00Z"), ZoneOffset.UTC),
+                appProperties());
 
-        CalendarService.CalendarView view = calendarService.availabilityCalendar(
-                startsAt,
-                endsAt,
-                camera.getCategory().getId());
+        CalendarService.MonthCalendar calendar = calendarService.monthCalendar(null);
 
-        assertThat(view.days()).extracting(CalendarService.CalendarDay::date)
-                .containsExactly(java.time.LocalDate.parse("2026-06-15"), java.time.LocalDate.parse("2026-06-16"));
-        assertThat(view.items()).singleElement().satisfies(item -> {
-            assertThat(item.categoryName()).isEqualTo("Cameras");
-            assertThat(item.equipmentName()).isEqualTo("Camera");
-            assertThat(item.total()).isEqualTo(3);
-            assertThat(item.booked()).isEqualTo(1);
-            assertThat(item.available()).isEqualTo(2);
+        assertThat(calendar.month()).isEqualTo(YearMonth.parse("2026-06"));
+        assertThat(calendar.days()).hasSize(30);
+        assertThat(calendar.days().getFirst().date()).isEqualTo(LocalDate.parse("2026-06-01"));
+        assertThat(calendar.days())
+                .filteredOn(day -> day.date().equals(LocalDate.parse("2026-06-02")))
+                .singleElement()
+                .satisfies(day -> {
+                    assertThat(day.bookingCount()).isEqualTo(1);
+                    assertThat(day.hasBookings()).isTrue();
+                });
+        assertThat(calendar.days())
+                .filteredOn(day -> day.date().equals(LocalDate.parse("2026-06-06")))
+                .singleElement()
+                .extracting(CalendarService.CalendarDay::bookingCount)
+                .isEqualTo(1);
+        assertThat(calendar.days())
+                .filteredOn(day -> day.date().equals(LocalDate.parse("2026-06-08")))
+                .singleElement()
+                .extracting(CalendarService.CalendarDay::bookingCount)
+                .isEqualTo(0);
+    }
+
+    @Test
+    void buildsDayDetailWithBookingLines() {
+        EquipmentItem camera = item("Камеры", "Sony FX6", TrackingMode.UNIT);
+        User user = user("Ирина Продюсер");
+        Booking booking = new Booking(
+                user,
+                Instant.parse("2026-06-15T10:00:00Z"),
+                Instant.parse("2026-06-15T12:00:00Z"),
+                BookingStatus.BOOKED);
+        booking.setComment("Интервью");
+        booking.replaceLines(java.util.Set.of(new BookingLine(booking, camera, null, 1)));
+        CalendarService calendarService = new CalendarService(
+                bookingRepositoryWith(booking),
+                Clock.fixed(Instant.parse("2026-06-15T08:00:00Z"), ZoneOffset.UTC),
+                appProperties());
+
+        CalendarService.DayCalendar day = calendarService.dayCalendar(LocalDate.parse("2026-06-15"));
+
+        assertThat(day.date()).isEqualTo(LocalDate.parse("2026-06-15"));
+        assertThat(day.bookings()).singleElement().satisfies(summary -> {
+            assertThat(summary.userDisplayName()).isEqualTo("Ирина Продюсер");
+            assertThat(summary.comment()).isEqualTo("Интервью");
+            assertThat(summary.lines()).singleElement().satisfies(line -> {
+                assertThat(line.categoryName()).isEqualTo("Камеры");
+                assertThat(line.equipmentName()).isEqualTo("Sony FX6");
+                assertThat(line.quantity()).isEqualTo(1);
+            });
         });
+    }
+
+    private BookingRepository bookingRepositoryWith(Booking... bookings) {
+        BookingRepository bookingRepository = mock(BookingRepository.class);
+        when(bookingRepository.findByStatusAndStartsAtLessThanAndEndsAtGreaterThanOrderByStartsAtAsc(
+                org.mockito.ArgumentMatchers.eq(BookingStatus.BOOKED),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of(bookings));
+        return bookingRepository;
+    }
+
+    private Booking booking(String startsAt, String endsAt) {
+        Booking booking = new Booking(user("User"), Instant.parse(startsAt), Instant.parse(endsAt), BookingStatus.BOOKED);
+        ReflectionTestUtils.setField(booking, "id", UUID.randomUUID());
+        return booking;
+    }
+
+    private User user(String displayName) {
+        User user = new User(UUID.randomUUID() + "@example.com", "hash", displayName);
+        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+        return user;
     }
 
     private EquipmentItem item(String categoryName, String itemName, TrackingMode trackingMode) {
@@ -62,5 +119,12 @@ class CalendarServiceTests {
         EquipmentItem item = new EquipmentItem(category, itemName, trackingMode, trackingMode == TrackingMode.QUANTITY ? 3 : 0);
         ReflectionTestUtils.setField(item, "id", UUID.randomUUID());
         return item;
+    }
+
+    private AppProperties appProperties() {
+        return new AppProperties(
+                ZoneId.of("UTC"),
+                new AppProperties.Security(false),
+                new AppProperties.BootstrapAdmin(null, null, null));
     }
 }

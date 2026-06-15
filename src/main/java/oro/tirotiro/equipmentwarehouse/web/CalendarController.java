@@ -2,64 +2,59 @@ package oro.tirotiro.equipmentwarehouse.web;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.UUID;
+import java.time.YearMonth;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import oro.tirotiro.equipmentwarehouse.calendar.CalendarService;
-import oro.tirotiro.equipmentwarehouse.config.AppProperties;
-import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
 
 @Controller
 @RequestMapping("/calendar")
 public class CalendarController {
 
     private final CalendarService calendarService;
-    private final EquipmentCategoryRepository categoryRepository;
     private final Clock clock;
-    private final ZoneId zoneId;
 
     public CalendarController(
             CalendarService calendarService,
-            EquipmentCategoryRepository categoryRepository,
-            Clock clock,
-            AppProperties appProperties) {
+            Clock clock) {
         this.calendarService = calendarService;
-        this.categoryRepository = categoryRepository;
         this.clock = clock;
-        this.zoneId = appProperties.timeZone();
     }
 
     @GetMapping
-    public String calendar(Model model) {
-        addCalendarModel(model, LocalDate.now(clock), LocalDate.now(clock).plusDays(7), null);
+    public String calendar(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+            Model model) {
+        addCalendarModel(model, month);
         return "calendar/index";
     }
 
     @GetMapping("/partial")
     public String calendarPartial(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startsOn,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endsOn,
-            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
             Model model) {
-        addCalendarModel(model, startsOn, endsOn, categoryId);
+        addCalendarModel(model, month);
         return "calendar/partials/grid :: calendarGrid";
     }
 
-    private void addCalendarModel(Model model, LocalDate startsOn, LocalDate endsOn, UUID categoryId) {
-        model.addAttribute("categories", categoryRepository.findAll());
-        model.addAttribute("startsOn", startsOn);
-        model.addAttribute("endsOn", endsOn);
-        model.addAttribute("selectedCategoryId", categoryId);
-        model.addAttribute("calendar", calendarService.availabilityCalendar(
-                startsOn.atStartOfDay(zoneId).toInstant(),
-                endsOn.plusDays(1).atStartOfDay(zoneId).toInstant(),
-                categoryId));
+    @GetMapping("/day/{date}")
+    public String calendarDay(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Model model) {
+        model.addAttribute("day", calendarService.dayCalendar(date));
+        return "calendar/day";
+    }
+
+    private void addCalendarModel(Model model, YearMonth month) {
+        YearMonth selectedMonth = month == null ? YearMonth.from(LocalDate.now(clock)) : month;
+        model.addAttribute("selectedMonth", selectedMonth);
+        model.addAttribute("calendar", calendarService.monthCalendar(selectedMonth));
     }
 }

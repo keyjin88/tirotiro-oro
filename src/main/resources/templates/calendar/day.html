@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{calendar.day.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <div class="page-title">
+        <div>
+            <a class="muted" th:href="@{/calendar(month=${day.month})}" th:text="#{calendar.backToMonth}">Назад к месяцу</a>
+            <h1 th:text="#{calendar.day.heading(${#temporals.format(day.date, 'dd.MM.yyyy')})}">Бронирования на день</h1>
+            <p class="muted" th:text="#{calendar.day.subtitle}">Подробная информация по бронированиям выбранного дня.</p>
+        </div>
+    </div>
+    <section class="card">
+        <table>
+            <thead>
+            <tr>
+                <th th:text="#{calendar.day.period}">Период</th>
+                <th th:text="#{calendar.day.user}">Пользователь</th>
+                <th th:text="#{calendar.day.items}">Оборудование</th>
+                <th th:text="#{calendar.day.comment}">Комментарий</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="booking : ${day.bookings}">
+                <td>
+                    <strong th:text="${#temporals.format(booking.startsAt, 'yyyy-MM-dd HH:mm')}">Начало</strong>
+                    <span th:text="${' ' + #messages.msg('bookings.table.to') + ' '}"> по </span>
+                    <span th:text="${#temporals.format(booking.endsAt, 'yyyy-MM-dd HH:mm')}">Окончание</span>
+                </td>
+                <td th:text="${booking.userDisplayName}">Пользователь</td>
+                <td>
+                    <div class="stack compact">
+                        <div th:each="line : ${booking.lines}">
+                            <strong th:text="${line.equipmentName}">Оборудование</strong>
+                            <span class="muted" th:text="${' · ' + line.categoryName}"> · Категория</span>
+                            <span th:text="${' x ' + line.quantity}"> x 1</span>
+                            <span class="pill" th:if="${line.inventoryNumber != null}" th:text="${line.inventoryNumber}">INV-1</span>
+                        </div>
+                    </div>
+                </td>
+                <td th:text="${booking.comment ?: #messages.msg('calendar.day.noComment')}">Комментарий</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(day.bookings)}">
+                <td colspan="4" class="empty" th:text="#{calendar.day.empty}">На этот день бронирований нет.</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

@@ -16,6 +16,7 @@ spring:
   liquibase:
     change-log: classpath:/db/changelog/db.changelog-master.yaml
     enabled: ${SPRING_LIQUIBASE_ENABLED:true}
+    contexts: ${SPRING_LIQUIBASE_CONTEXTS:}
   thymeleaf:
     cache: true
   messages:
