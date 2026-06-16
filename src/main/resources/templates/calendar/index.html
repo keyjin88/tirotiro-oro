@@ -4,6 +4,7 @@
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
     <div class="page-title">
         <div>
             <h1 th:text="#{calendar.heading}">Календарь бронирований</h1>
@@ -12,6 +13,7 @@
     </div>
     <section th:replace="~{bookings/partials/filters :: bookingFilters}"></section>
     <section th:replace="~{calendar/partials/grid :: calendarGrid}"></section>
+    <div th:replace="~{fragments/booking-dialog-shell :: bookingDialogShell}"></div>
 </main>
 </body>
 </html>

@@ -78,12 +78,17 @@ class AdminPageRenderProbeTest {
 
     @Test
     void adminEquipmentPageRendersWithActiveItemsForAdmin() throws Exception {
+        User admin = new User("admin@example.com", "hash", "Local Admin");
+        ReflectionTestUtils.setField(admin, "id", UUID.randomUUID());
         EquipmentCategory category = new EquipmentCategory("Cameras", "Video");
         ReflectionTestUtils.setField(category, "id", UUID.randomUUID());
         EquipmentItem item = new EquipmentItem(category, "Sony FX3", TrackingMode.QUANTITY, 2);
+        item.assignOwner(admin);
         ReflectionTestUtils.setField(item, "id", UUID.randomUUID());
+        when(currentUserService.requireCurrentUser()).thenReturn(admin);
         when(categoryRepository.findAll()).thenReturn(List.of(category));
         when(itemRepository.findAllDetailed()).thenReturn(List.of(item));
+        when(userRepository.findAllByEnabledTrueOrderByDisplayNameAsc()).thenReturn(List.of(admin));
 
         mockMvc.perform(get("/admin/equipment").with(user("admin").roles("ADMIN")))
                 .andDo(print())
@@ -109,6 +114,7 @@ class AdminPageRenderProbeTest {
         EquipmentCategory category = new EquipmentCategory("Cameras", "Video");
         ReflectionTestUtils.setField(category, "id", UUID.randomUUID());
         EquipmentItem item = new EquipmentItem(category, "Sony FX3", TrackingMode.QUANTITY, 2);
+        item.assignOwner(actor);
         ReflectionTestUtils.setField(item, "id", UUID.randomUUID());
         Booking booking = new Booking(actor, START, END, BookingStatus.BOOKED);
         ReflectionTestUtils.setField(booking, "id", UUID.randomUUID());
@@ -129,6 +135,7 @@ class AdminPageRenderProbeTest {
         @Bean
         AppProperties appProperties() {
             return new AppProperties(
+                    "0.2.0-test",
                     ZoneId.of("UTC"),
                     new AppProperties.Security(false),
                     new AppProperties.BootstrapAdmin(null, null, null));

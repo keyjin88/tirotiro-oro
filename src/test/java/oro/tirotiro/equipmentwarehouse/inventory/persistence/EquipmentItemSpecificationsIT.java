@@ -14,6 +14,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
+
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=validate",
@@ -42,16 +45,24 @@ class EquipmentItemSpecificationsIT {
     @Autowired
     private EquipmentItemRepository itemRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private User bootstrapUser() {
+        return userRepository.findByEmailIgnoreCase("bootstrap-it@example.com").orElseThrow();
+    }
+
     @Test
     void filtersCatalogBySearchCategoryTrackingModeAndActiveStatus() {
+        User owner = bootstrapUser();
         EquipmentCategory cameras = categoryRepository.save(new EquipmentCategory("Cameras", null));
         EquipmentCategory lights = categoryRepository.save(new EquipmentCategory("Lights", null));
 
-        EquipmentItem activeCamera = itemRepository.save(new EquipmentItem(cameras, "Sony Camera", TrackingMode.UNIT, 0));
-        EquipmentItem archivedCamera = itemRepository.save(new EquipmentItem(cameras, "Old Camera", TrackingMode.QUANTITY, 1));
+        EquipmentItem activeCamera = itemRepository.save(item(cameras, "Sony Camera", TrackingMode.UNIT, 0, owner));
+        EquipmentItem archivedCamera = itemRepository.save(item(cameras, "Old Camera", TrackingMode.QUANTITY, 1, owner));
         archivedCamera.softDelete(null, "retired", java.time.Instant.parse("2026-06-01T00:00:00Z"));
         itemRepository.save(archivedCamera);
-        EquipmentItem light = itemRepository.save(new EquipmentItem(lights, "LED Panel", TrackingMode.QUANTITY, 3));
+        EquipmentItem light = itemRepository.save(item(lights, "LED Panel", TrackingMode.QUANTITY, 3, owner));
 
         assertThat(itemRepository.findAll(
                 EquipmentItemSpecifications.fromCriteria(new EquipmentSearchCriteria("Sony", null, null, true)),
@@ -82,5 +93,16 @@ class EquipmentItemSpecificationsIT {
                 Sort.by("name")))
                 .extracting(EquipmentItem::getName)
                 .containsExactly("LED Panel", "Old Camera", "Sony Camera");
+    }
+
+    private EquipmentItem item(
+            EquipmentCategory category,
+            String name,
+            TrackingMode trackingMode,
+            int totalQuantity,
+            User owner) {
+        EquipmentItem item = new EquipmentItem(category, name, trackingMode, totalQuantity);
+        item.assignOwner(owner);
+        return item;
     }
 }

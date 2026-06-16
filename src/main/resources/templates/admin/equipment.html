@@ -33,6 +33,13 @@
             <label><span th:text="#{admin.equipment.name}">Название</span> <input th:field="*{name}" required>
                 <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Введите название оборудования.</span>
             </label>
+            <label><span th:text="#{admin.equipment.owner}">Владелец</span>
+                <select th:field="*{ownerUserId}" required>
+                    <option value="" th:text="#{equipment.form.selectOwner}">Выберите владельца</option>
+                    <option th:each="owner : ${ownerCandidates}" th:value="${owner.id}" th:text="${owner.displayName}">Пользователь</option>
+                </select>
+                <span class="field-error" th:if="${#fields.hasErrors('ownerUserId')}" th:errors="*{ownerUserId}">Выберите владельца.</span>
+            </label>
             <label><span th:text="#{admin.equipment.manufacturer}">Производитель</span> <input th:field="*{manufacturer}"></label>
             <label><span th:text="#{admin.equipment.model}">Модель</span> <input th:field="*{model}"></label>
             <label><span th:text="#{admin.equipment.tracking}">Учет</span>

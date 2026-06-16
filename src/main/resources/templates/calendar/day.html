@@ -4,6 +4,7 @@
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
     <div class="page-title">
         <div>
             <a class="muted"
@@ -12,6 +13,12 @@
             <h1 th:text="#{calendar.day.heading(${#temporals.format(day.date, 'dd.MM.yyyy')})}">Бронирования на день</h1>
             <p class="muted" th:text="#{calendar.day.subtitle}">Подробная информация по бронированиям выбранного дня.</p>
         </div>
+        <button type="button"
+                class="icon-button"
+                data-booking-dialog
+                th:attr="data-date=${day.date}, data-return-url=@{/calendar/day/{date}(date=${day.date}, status=${day.filter.status}, userId=${day.filter.userId}, fromDate=${day.filter.fromDate}, toDate=${day.filter.toDate}, equipmentItemId=${day.filter.equipmentItemId})}"
+                th:aria-label="#{calendar.addBooking}"
+                th:title="#{calendar.addBooking}">+</button>
     </div>
     <section class="card">
         <table>
@@ -34,8 +41,11 @@
                 <td>
                     <div class="stack compact">
                         <div th:each="line : ${booking.lines}">
-                            <strong th:text="${line.equipmentName}">Оборудование</strong>
+                            <a th:href="@{/equipment/{id}(id=${line.equipmentItemId})}"
+                               th:text="${line.equipmentName}">Оборудование</a>
                             <span class="muted" th:text="${' · ' + line.categoryName}"> · Категория</span>
+                            <span class="muted"
+                                  th:text="${' · ' + #messages.msg('calendar.day.owner') + ': ' + line.ownerDisplayName}"> · Владелец</span>
                             <span th:text="${' x ' + line.quantity}"> x 1</span>
                             <span class="pill" th:if="${line.inventoryNumber != null}" th:text="${line.inventoryNumber}">INV-1</span>
                         </div>
@@ -49,6 +59,7 @@
             </tbody>
         </table>
     </section>
+    <div th:replace="~{fragments/booking-dialog-shell :: bookingDialogShell}"></div>
 </main>
 </body>
 </html>

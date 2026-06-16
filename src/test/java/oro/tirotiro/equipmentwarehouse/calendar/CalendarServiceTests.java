@@ -71,7 +71,9 @@ class CalendarServiceTests {
 
     @Test
     void buildsDayDetailWithBookingLines() {
+        User owner = user("Владелец оборудования");
         EquipmentItem camera = item("Камеры", "Sony FX6", TrackingMode.UNIT);
+        camera.assignOwner(owner);
         User user = user("Ирина Продюсер");
         Booking booking = new Booking(
                 user,
@@ -96,8 +98,10 @@ class CalendarServiceTests {
             assertThat(summary.userDisplayName()).isEqualTo("Ирина Продюсер");
             assertThat(summary.comment()).isEqualTo("Интервью");
             assertThat(summary.lines()).singleElement().satisfies(line -> {
+                assertThat(line.equipmentItemId()).isEqualTo(camera.getId());
                 assertThat(line.categoryName()).isEqualTo("Камеры");
                 assertThat(line.equipmentName()).isEqualTo("Sony FX6");
+                assertThat(line.ownerDisplayName()).isEqualTo("Владелец оборудования");
                 assertThat(line.quantity()).isEqualTo(1);
             });
         });
@@ -126,6 +130,7 @@ class CalendarServiceTests {
 
     private AppProperties appProperties() {
         return new AppProperties(
+                "0.2.0-test",
                 ZoneId.of("UTC"),
                 new AppProperties.Security(false),
                 new AppProperties.BootstrapAdmin(null, null, null));

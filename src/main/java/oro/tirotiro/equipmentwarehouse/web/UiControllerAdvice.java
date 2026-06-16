@@ -6,9 +6,21 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 import oro.tirotiro.equipmentwarehouse.auth.AuthenticatedUser;
+import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 
 @ControllerAdvice
 public class UiControllerAdvice {
+
+    private final AppProperties appProperties;
+
+    UiControllerAdvice(AppProperties appProperties) {
+        this.appProperties = appProperties;
+    }
+
+    @ModelAttribute("appVersion")
+    String appVersion() {
+        return appProperties.version();
+    }
 
     @ModelAttribute("currentUserDisplayName")
     String currentUserDisplayName(Authentication authentication) {

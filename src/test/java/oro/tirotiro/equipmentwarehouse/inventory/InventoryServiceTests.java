@@ -22,6 +22,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import oro.tirotiro.equipmentwarehouse.audit.AuditService;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
@@ -39,12 +40,14 @@ class InventoryServiceTests {
     private final EquipmentCategoryRepository categoryRepository = mock(EquipmentCategoryRepository.class);
     private final EquipmentItemRepository itemRepository = mock(EquipmentItemRepository.class);
     private final EquipmentUnitRepository unitRepository = mock(EquipmentUnitRepository.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
     private final PermissionService permissionService = mock(PermissionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final InventoryService inventoryService = new InventoryService(
             categoryRepository,
             itemRepository,
             unitRepository,
+            userRepository,
             permissionService,
             auditService,
             Clock.fixed(NOW, ZoneOffset.UTC));
@@ -92,19 +95,75 @@ class InventoryServiceTests {
     @Test
     void createsQuantityItemWhenActorCanCreateEquipment() {
         User actor = actor();
+        User owner = actor();
         EquipmentCategory category = category();
         when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
-        when(itemRepository.save(any(EquipmentItem.class))).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+        when(userRepository.findById(actor.getId())).thenReturn(Optional.of(owner));
+        when(itemRepository.save(any(EquipmentItem.class))).thenAnswer(invocation -> {
+            EquipmentItem saved = invocation.getArgument(0);
+            saved.assignOwner(owner);
+            return withId(saved);
+        });
 
         EquipmentItem item = inventoryService.createItem(
                 new InventoryService.CreateItemCommand(
-                        category.getId(), "Camera", "Sony", "FX", "Body", TrackingMode.QUANTITY, 2),
+                        category.getId(), "Camera", "Sony", "FX", "Body", TrackingMode.QUANTITY, 2, actor.getId()),
                 actor);
 
         assertThat(item.getTrackingMode()).isEqualTo(TrackingMode.QUANTITY);
         assertThat(item.getTotalQuantity()).isEqualTo(2);
+        assertThat(item.getOwner()).isEqualTo(owner);
         verify(permissionService).requireEquipmentCreate(actor);
         verify(auditService).record(eq(actor), eq("EQUIPMENT_ITEM_CREATED"), eq("EQUIPMENT_ITEM"), eq(item.getId()), any());
+    }
+
+    @Test
+    void defaultsOwnerToActorWhenOwnerNotSpecified() {
+        User actor = actor();
+        EquipmentCategory category = category();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(userRepository.findById(actor.getId())).thenReturn(Optional.of(actor));
+        when(itemRepository.save(any(EquipmentItem.class))).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        EquipmentItem item = inventoryService.createItem(
+                new InventoryService.CreateItemCommand(
+                        category.getId(), "Camera", null, null, null, TrackingMode.QUANTITY, 1, null),
+                actor);
+
+        assertThat(item.getOwner()).isEqualTo(actor);
+    }
+
+    @Test
+    void rejectsDisabledOwner() {
+        User actor = actor();
+        User disabledOwner = actor();
+        ReflectionTestUtils.setField(disabledOwner, "enabled", false);
+        EquipmentCategory category = category();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(userRepository.findById(disabledOwner.getId())).thenReturn(Optional.of(disabledOwner));
+
+        assertThatThrownBy(() -> inventoryService.createItem(
+                new InventoryService.CreateItemCommand(
+                        category.getId(), "Camera", null, null, null, TrackingMode.QUANTITY, 1, disabledOwner.getId()),
+                actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("активным пользователем");
+    }
+
+    @Test
+    void rejectsMissingOwner() {
+        User actor = actor();
+        UUID missingOwnerId = UUID.randomUUID();
+        EquipmentCategory category = category();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(userRepository.findById(missingOwnerId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> inventoryService.createItem(
+                new InventoryService.CreateItemCommand(
+                        category.getId(), "Camera", null, null, null, TrackingMode.QUANTITY, 1, missingOwnerId),
+                actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Пользователь не найден");
     }
 
     @Test
@@ -114,7 +173,7 @@ class InventoryServiceTests {
 
         assertThatThrownBy(() -> inventoryService.createItem(
                 new InventoryService.CreateItemCommand(
-                        category.getId(), "Camera", null, null, null, TrackingMode.QUANTITY, 0),
+                        category.getId(), "Camera", null, null, null, TrackingMode.QUANTITY, 0, actor().getId()),
                 actor()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("положительное общее количество");
@@ -204,7 +263,9 @@ class InventoryServiceTests {
     }
 
     private EquipmentItem item(TrackingMode trackingMode) {
-        return withId(new EquipmentItem(category(), "Camera", trackingMode, trackingMode == TrackingMode.QUANTITY ? 2 : 0));
+        EquipmentItem item = withId(new EquipmentItem(category(), "Camera", trackingMode, trackingMode == TrackingMode.QUANTITY ? 2 : 0));
+        item.assignOwner(actor());
+        return item;
     }
 
     private <T> T withId(T entity) {

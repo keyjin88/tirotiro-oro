@@ -13,7 +13,13 @@
             </td>
             <td th:text="${booking.user.displayName}">Пользователь</td>
             <td>
-                <div th:each="line : ${booking.lines}" th:text="${line.equipmentItem.name + ' x ' + line.quantity}">Строка</div>
+                <div th:each="line : ${booking.lines}" class="booking-item-line">
+                    <a th:href="@{/equipment/{id}(id=${line.equipmentItem.id})}"
+                       th:text="${line.equipmentItem.name}">Оборудование</a>
+                    <span th:text="${' x ' + line.quantity}"> x 1</span>
+                    <span class="muted"
+                          th:text="${' · ' + #messages.msg('bookings.table.owner') + ': ' + line.equipmentItem.owner.displayName}"> · Владелец</span>
+                </div>
             </td>
             <td><span class="pill" th:text="${#messages.msg('enum.BookingStatus.' + booking.status.name())}">Забронировано</span></td>
             <td class="actions">

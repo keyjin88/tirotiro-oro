@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<section th:fragment="bookingFormFields" class="stack" th:object="${form}">
+    <label><span th:text="#{bookings.form.startsAt}">Начало</span> <input type="datetime-local" th:field="*{startsAt}" data-booking-starts-at required>
+        <span class="field-error" th:if="${#fields.hasErrors('startsAt')}" th:errors="*{startsAt}">Укажите начало бронирования.</span>
+    </label>
+    <label><span th:text="#{bookings.form.endsAt}">Окончание</span> <input type="datetime-local" th:field="*{endsAt}" data-booking-ends-at required>
+        <span class="field-error" th:if="${#fields.hasErrors('endsAt')}" th:errors="*{endsAt}">Укажите окончание бронирования.</span>
+    </label>
+    <section class="stack">
+        <div>
+            <h2 th:text="#{bookings.form.lines}">Позиции бронирования</h2>
+            <p class="muted" th:text="#{bookings.form.searchHelp}">Ищите оборудование по названию, производителю, модели или категории.</p>
+        </div>
+        <section id="booking-lines" class="stack" th:fragment="bookingLines" th:object="${form}">
+            <th:block th:each="line, lineStat : *{lines}">
+                <section th:replace="~{bookings/partials/line :: bookingLine(${lineStat.index}, ${line}, ${line.equipmentItemId == null ? null : selectedItemsById.get(line.equipmentItemId)}, ${line.equipmentItemId == null ? null : unitsByItemId.get(line.equipmentItemId)})}"></section>
+            </th:block>
+        </section>
+        <button type="button"
+                class="secondary"
+                hx-get="/bookings/line"
+                hx-target="#booking-lines"
+                hx-swap="beforeend"
+                hx-vals="js:{index: document.querySelectorAll('[data-booking-line]').length}"
+                th:text="#{bookings.form.addLine}">Добавить позицию</button>
+    </section>
+    <label><span th:text="#{bookings.form.comment}">Комментарий</span> <textarea th:field="*{comment}"></textarea></label>
+</section>
+</body>
+</html>

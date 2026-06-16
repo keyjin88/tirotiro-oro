@@ -395,6 +395,7 @@ class AuthSupportTests {
 
     private AppProperties appProperties(String email, String password, String name) {
         return new AppProperties(
+                "0.2.0-test",
                 java.time.ZoneId.of("UTC"),
                 new AppProperties.Security(false),
                 new AppProperties.BootstrapAdmin(email, password, name));

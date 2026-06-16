@@ -32,4 +32,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     java.util.List<User> findAllWithRolesAndPermissions();
 
     java.util.List<User> findAllByOrderByDisplayNameAsc();
+
+    java.util.List<User> findAllByEnabledTrueOrderByDisplayNameAsc();
 }

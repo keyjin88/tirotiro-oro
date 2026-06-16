@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<div th:fragment="bookingModal" id="booking-modal-root">
+    <form th:action="@{/bookings}" th:object="${form}" method="post" class="stack" id="booking-modal-form"
+          hx-post="/bookings"
+          hx-target="#booking-dialog-content"
+          hx-swap="innerHTML">
+        <h2 th:text="#{bookings.dialog.create.title}">Новое бронирование</h2>
+        <p class="flash error" th:if="${error}" th:text="${error}"></p>
+        <input type="hidden" name="returnUrl" th:value="${returnUrl}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <section th:replace="~{bookings/partials/form-fields :: bookingFormFields}"></section>
+        <div class="dialog-actions">
+            <button type="button" class="secondary btn-sm" data-dialog-close th:text="#{bookings.dialog.dismiss}">Назад</button>
+            <button type="submit" class="btn-sm" th:text="#{bookings.form.submit}">Создать бронирование</button>
+        </div>
+    </form>
+</div>
+</body>
+</html>

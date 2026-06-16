@@ -17,20 +17,22 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+
 public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UUID>, JpaSpecificationExecutor<EquipmentItem> {
 
     @Override
-    @EntityGraph(attributePaths = "category")
+    @EntityGraph(attributePaths = {"category", "owner"})
     java.util.List<EquipmentItem> findAll(Specification<EquipmentItem> spec, Sort sort);
 
-    @EntityGraph(attributePaths = "category")
+    @EntityGraph(attributePaths = {"category", "owner"})
     List<EquipmentItem> findByActiveTrueOrderByNameAsc();
 
-    @EntityGraph(attributePaths = "category")
+    @EntityGraph(attributePaths = {"category", "owner"})
     @Query("select item from EquipmentItem item order by item.name")
     List<EquipmentItem> findAllDetailed();
 
-    @EntityGraph(attributePaths = "category")
+    @EntityGraph(attributePaths = {"category", "owner"})
     @Query("select item from EquipmentItem item where item.id = :id")
     java.util.Optional<EquipmentItem> findDetailedById(@Param("id") UUID id);
 
@@ -65,4 +67,8 @@ public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UU
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update EquipmentItem item set item.deletedBy = null where item.deletedBy.id = :userId")
     void clearDeletedByReferences(@Param("userId") UUID userId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update EquipmentItem item set item.owner = :newOwner where item.owner.id = :userId")
+    void reassignOwnerReferences(@Param("userId") UUID userId, @Param("newOwner") User newOwner);
 }

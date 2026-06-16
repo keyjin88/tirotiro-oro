@@ -91,8 +91,8 @@ class EquipmentWarehousePostgresIT {
     void findFilteredBookingsWithNoOptionalFiltersWorksOnPostgres() {
         User actor = adminUser();
         EquipmentCategory category = categoryRepository.save(new EquipmentCategory("Booking Filters", "Filter tests"));
-        EquipmentItem item = itemRepository.save(new EquipmentItem(category, "Filter Camera", TrackingMode.QUANTITY, 1));
-        EquipmentItem otherItem = itemRepository.save(new EquipmentItem(category, "Other Camera", TrackingMode.QUANTITY, 1));
+        EquipmentItem item = itemRepository.save(item(category, "Filter Camera", TrackingMode.QUANTITY, 1, actor));
+        EquipmentItem otherItem = itemRepository.save(item(category, "Other Camera", TrackingMode.QUANTITY, 1, actor));
 
         bookingService.createBooking(command(item, START, END, "filter test booking"), actor);
         bookingService.createBooking(command(otherItem, START, END, "other booking"), actor);
@@ -110,7 +110,7 @@ class EquipmentWarehousePostgresIT {
     void liquibaseSchemaSupportsBookingOverlapRejectionAndCancellation() {
         User actor = adminUser();
         EquipmentCategory category = categoryRepository.save(new EquipmentCategory("Cameras", "Production cameras"));
-        EquipmentItem item = itemRepository.save(new EquipmentItem(category, "Cinema Camera", TrackingMode.QUANTITY, 1));
+        EquipmentItem item = itemRepository.save(item(category, "Cinema Camera", TrackingMode.QUANTITY, 1, actor));
 
         Booking booking = bookingService.createBooking(
                 command(item, START, END, "first booking"),
@@ -148,6 +148,7 @@ class EquipmentWarehousePostgresIT {
 
     @Test
     void bookingEquipmentSearchMatchesCatalogAndUnitFields() {
+        User owner = adminUser();
         EquipmentCategory cameras = categoryRepository.save(new EquipmentCategory("Search Cameras", "Camera category"));
         EquipmentCategory sound = categoryRepository.save(new EquipmentCategory("Search Sound", "Audio category"));
 
@@ -157,35 +158,40 @@ class EquipmentWarehousePostgresIT {
                 "Cooke",
                 "S4",
                 TrackingMode.QUANTITY,
-                3));
+                3,
+                owner));
         EquipmentItem categoryItem = itemRepository.save(item(
                 sound,
                 "Search Boom Pole",
                 "Ambient",
                 "QS",
                 TrackingMode.QUANTITY,
-                2));
+                2,
+                owner));
         EquipmentItem manufacturerItem = itemRepository.save(item(
                 cameras,
                 "Search Field Monitor",
                 "SmallHD",
                 "Indie 7",
                 TrackingMode.QUANTITY,
-                1));
+                1,
+                owner));
         EquipmentItem modelItem = itemRepository.save(item(
                 cameras,
                 "Search Prime Lens",
                 "Canon",
                 "CN-E 50",
                 TrackingMode.QUANTITY,
-                1));
+                1,
+                owner));
         EquipmentItem unitItem = itemRepository.save(item(
                 cameras,
                 "Search Cinema Body",
                 "ARRI",
                 "Alexa Mini",
                 TrackingMode.UNIT,
-                0));
+                0,
+                owner));
         EquipmentUnit unit = new EquipmentUnit(unitItem, "SEARCH-INV-001", "Хорошее", EquipmentUnitStatus.AVAILABLE);
         unit.updateDetails("SEARCH-SERIAL-001", "Хорошее", EquipmentUnitStatus.AVAILABLE, null);
         unitRepository.save(unit);
@@ -220,10 +226,21 @@ class EquipmentWarehousePostgresIT {
             String manufacturer,
             String model,
             TrackingMode trackingMode,
-            int totalQuantity) {
+            int totalQuantity,
+            User owner) {
         EquipmentItem item = new EquipmentItem(category, name, trackingMode, totalQuantity);
         item.updateDetails(category, name, manufacturer, model, null);
+        item.assignOwner(owner);
         return item;
+    }
+
+    private EquipmentItem item(
+            EquipmentCategory category,
+            String name,
+            TrackingMode trackingMode,
+            int totalQuantity,
+            User owner) {
+        return item(category, name, null, null, trackingMode, totalQuantity, owner);
     }
 
     private BookingService.CreateBookingCommand command(

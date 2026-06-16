@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-add-equipment-owner
+      author: cursor
+      changes:
+        - addColumn:
+            tableName: equipment_items
+            columns:
+              - column:
+                  name: owner_user_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              update equipment_items
+              set owner_user_id = (
+                select u.id
+                from users u
+                join user_roles ur on ur.user_id = u.id
+                join roles r on r.id = ur.role_id
+                where r.code = 'ADMIN'
+                order by u.created_at
+                limit 1
+              )
+              where owner_user_id is null;
+
+              update equipment_items
+              set owner_user_id = (select id from users order by created_at limit 1)
+              where owner_user_id is null;
+        - addNotNullConstraint:
+            tableName: equipment_items
+            columnName: owner_user_id
+            columnDataType: uuid
+        - addForeignKeyConstraint:
+            baseTableName: equipment_items
+            baseColumnNames: owner_user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_equipment_items_owner
+        - createIndex:
+            tableName: equipment_items
+            indexName: idx_equipment_items_owner_user_id
+            columns:
+              - column:
+                  name: owner_user_id

@@ -13,23 +13,39 @@
             <h2 th:text="${#temporals.format(calendar.firstDay, 'LLLL yyyy')}">Июнь 2026</h2>
             <p class="muted" th:text="#{calendar.monthSummary(${#temporals.format(calendar.firstDay, 'dd.MM.yyyy')}, ${#temporals.format(calendar.lastDay, 'dd.MM.yyyy')})}">Период месяца</p>
         </div>
-        <a class="button secondary"
-           th:attr="hx-get=@{/calendar/partial(month=${calendar.nextMonth}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}"
-           hx-target="#calendar-grid"
-           hx-swap="outerHTML"
-           th:href="@{/calendar(month=${calendar.nextMonth}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}"
-           th:text="#{calendar.nextMonth}">Следующий месяц</a>
+        <div class="calendar-toolbar-actions">
+            <button type="button"
+                    class="icon-button"
+                    data-booking-dialog
+                    th:attr="data-return-url=@{/calendar(month=${selectedMonth}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}"
+                    th:aria-label="#{calendar.addBooking}"
+                    th:title="#{calendar.addBooking}">+</button>
+            <a class="button secondary"
+               th:attr="hx-get=@{/calendar/partial(month=${calendar.nextMonth}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}"
+               hx-target="#calendar-grid"
+               hx-swap="outerHTML"
+               th:href="@{/calendar(month=${calendar.nextMonth}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}"
+               th:text="#{calendar.nextMonth}">Следующий месяц</a>
+        </div>
     </div>
     <div class="calendar-tiles" th:if="${!#lists.isEmpty(calendar.days)}">
-        <a th:each="day : ${calendar.days}"
-           class="calendar-tile"
-           th:classappend="${day.hasBookings()} ? ' has-bookings' : ' no-bookings'"
-           th:href="@{/calendar/day/{date}(date=${day.date}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}">
-            <span class="calendar-tile-weekday" th:text="${day.weekdayName}">пн</span>
-            <strong class="calendar-tile-date" th:text="${#temporals.format(day.date, 'd')}">1</strong>
-            <span class="pill" th:if="${day.hasBookings()}" th:text="#{calendar.bookingCount(${day.bookingCount})}">Бронирований: 1</span>
-            <span class="muted" th:if="${!day.hasBookings()}" th:text="#{calendar.noBookings}">Нет бронирований</span>
-        </a>
+        <article th:each="day : ${calendar.days}"
+                 class="calendar-tile"
+                 th:classappend="${day.hasBookings()} ? ' has-bookings' : ' no-bookings'">
+            <button type="button"
+                    class="calendar-tile-add icon-button"
+                    data-booking-dialog
+                    th:attr="data-date=${day.date}, data-return-url=@{/calendar(month=${selectedMonth}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}"
+                    th:aria-label="#{calendar.addBooking}"
+                    th:title="#{calendar.addBooking}">+</button>
+            <a class="calendar-tile-link"
+               th:href="@{/calendar/day/{date}(date=${day.date}, status=${bookingFilter.status}, userId=${bookingFilter.userId}, fromDate=${bookingFilter.fromDate}, toDate=${bookingFilter.toDate}, equipmentItemId=${bookingFilter.equipmentItemId})}">
+                <span class="calendar-tile-weekday" th:text="${day.weekdayName}">пн</span>
+                <strong class="calendar-tile-date" th:text="${#temporals.format(day.date, 'd')}">1</strong>
+                <span class="pill" th:if="${day.hasBookings()}" th:text="#{calendar.bookingCount(${day.bookingCount})}">Бронирований: 1</span>
+                <span class="muted" th:if="${!day.hasBookings()}" th:text="#{calendar.noBookings}">Нет бронирований</span>
+            </a>
+        </article>
     </div>
 </section>
 </body>
