@@ -7,7 +7,10 @@ import java.time.ZoneId;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.validation.DataBinder;
 
+import oro.tirotiro.equipmentwarehouse.booking.BookingService;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnitStatus;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.TrackingMode;
 
@@ -93,6 +96,64 @@ class WebFormTests {
                     assertThat(line.equipmentUnitId()).isEqualTo(unitId);
                     assertThat(line.quantity()).isEqualTo(1);
                 });
+    }
+
+    @Test
+    void bookingFormBindsMultipleLinesFromIndexedFields() {
+        UUID quantityItemId = UUID.randomUUID();
+        UUID unitItemId = UUID.randomUUID();
+        UUID unitId = UUID.randomUUID();
+        BookingForm form = new BookingForm();
+        MutablePropertyValues values = new MutablePropertyValues();
+        values.add("startsAt", "2026-06-15T12:00:00");
+        values.add("endsAt", "2026-06-15T13:30:00");
+        values.add("lines[0].equipmentItemId", quantityItemId.toString());
+        values.add("lines[0].quantity", "3");
+        values.add("lines[1].equipmentItemId", unitItemId.toString());
+        values.add("lines[1].equipmentUnitId", unitId.toString());
+        values.add("lines[1].quantity", "1");
+
+        new DataBinder(form, "form").bind(values);
+
+        assertThat(form.toCommand(ZoneId.of("UTC")).lines())
+                .extracting(
+                        BookingService.BookingLineCommand::equipmentItemId,
+                        BookingService.BookingLineCommand::equipmentUnitId,
+                        BookingService.BookingLineCommand::quantity)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(quantityItemId, null, 3),
+                        org.assertj.core.groups.Tuple.tuple(unitItemId, unitId, 1));
+    }
+
+    @Test
+    void bookingFormRemovesMiddleLineAndCompactsRemainingLines() {
+        UUID firstItemId = UUID.randomUUID();
+        UUID removedItemId = UUID.randomUUID();
+        UUID lastItemId = UUID.randomUUID();
+        UUID lastUnitId = UUID.randomUUID();
+        BookingForm form = new BookingForm();
+        MutablePropertyValues values = new MutablePropertyValues();
+        values.add("startsAt", "2026-06-15T12:00:00");
+        values.add("endsAt", "2026-06-15T13:30:00");
+        values.add("lines[0].equipmentItemId", firstItemId.toString());
+        values.add("lines[0].quantity", "2");
+        values.add("lines[1].equipmentItemId", removedItemId.toString());
+        values.add("lines[1].quantity", "4");
+        values.add("lines[2].equipmentItemId", lastItemId.toString());
+        values.add("lines[2].equipmentUnitId", lastUnitId.toString());
+        values.add("lines[2].quantity", "1");
+
+        new DataBinder(form, "form").bind(values);
+        form.removeLine(1);
+
+        assertThat(form.toCommand(ZoneId.of("UTC")).lines())
+                .extracting(
+                        BookingService.BookingLineCommand::equipmentItemId,
+                        BookingService.BookingLineCommand::equipmentUnitId,
+                        BookingService.BookingLineCommand::quantity)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(firstItemId, null, 2),
+                        org.assertj.core.groups.Tuple.tuple(lastItemId, lastUnitId, 1));
     }
 
     @Test

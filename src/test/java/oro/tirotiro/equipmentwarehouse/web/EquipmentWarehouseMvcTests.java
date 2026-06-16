@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -21,6 +22,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -28,7 +30,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.mockito.ArgumentCaptor;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -53,7 +57,9 @@ import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemRepository;
+import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnit;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnitRepository;
+import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnitStatus;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.TrackingMode;
 import oro.tirotiro.equipmentwarehouse.permission.PermissionService;
 import oro.tirotiro.equipmentwarehouse.permission.persistence.PermissionCode;
@@ -282,19 +288,50 @@ class EquipmentWarehouseMvcTests {
     }
 
     @Test
-    void bookingFormSmokeRendersDefaultsAndCatalogItems() throws Exception {
-        EquipmentItem item = item("Lens", TrackingMode.QUANTITY, 2);
-        when(inventoryService.findActiveCatalog()).thenReturn(List.of(item));
-
+    void bookingFormSmokeRendersDefaultsWithoutLoadingCatalogItems() throws Exception {
         mockMvc.perform(get("/bookings/new").with(user("viewer").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Новое бронирование")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Lens")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Каталог загружается по мере поиска")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-booking-starts-at")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-booking-ends-at")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/webjars/htmx.org/2.0.4/dist/htmx.min.js")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-include=\"this\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/bookings/equipment-search?lineIndex=0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-target=\"#booking-line-0-search-results\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-trigger=\"input changed delay:300ms, search\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Введите минимум 2 символа для поиска.")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("T23:59")));
+
+        verify(inventoryService, never()).findActiveCatalog();
     }
 
     @Test
-    void bookingCreatePostsCommandWithCsrf() throws Exception {
-        UUID equipmentItemId = UUID.randomUUID();
+    void htmxWebJarAssetIsServedFromRenderedPath() throws Exception {
+        mockMvc.perform(get("/webjars/htmx.org/2.0.4/dist/htmx.min.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("htmx")));
+    }
+
+    @Test
+    void bookingLineRendersSearchHtmxWiringAndMinimumPrompt() throws Exception {
+        mockMvc.perform(get("/bookings/line")
+                .with(user("viewer").roles("USER"))
+                .param("index", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"q\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/bookings/equipment-search?lineIndex=1")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-target=\"#booking-line-1-search-results\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-include=\"this\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-trigger=\"input changed delay:300ms, search\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Введите минимум 2 символа для поиска.")));
+    }
+
+    @Test
+    void bookingCreatePostsMultiLineCommandWithCsrf() throws Exception {
+        UUID quantityItemId = UUID.randomUUID();
+        UUID unitItemId = UUID.randomUUID();
+        UUID unitId = UUID.randomUUID();
         User actor = actor();
         when(currentUserService.requireCurrentUser()).thenReturn(actor);
 
@@ -303,12 +340,126 @@ class EquipmentWarehouseMvcTests {
                 .with(csrf())
                 .param("startsAt", "2026-06-15T09:00")
                 .param("endsAt", "2026-06-15T10:00")
-                .param("equipmentItemId", equipmentItemId.toString())
-                .param("quantity", "1"))
+                .param("lines[0].equipmentItemId", quantityItemId.toString())
+                .param("lines[0].quantity", "2")
+                .param("lines[1].equipmentItemId", unitItemId.toString())
+                .param("lines[1].equipmentUnitId", unitId.toString())
+                .param("lines[1].quantity", "1"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/bookings"));
 
-        verify(bookingService).createBooking(any(BookingService.CreateBookingCommand.class), eq(actor));
+        ArgumentCaptor<BookingService.CreateBookingCommand> command =
+                ArgumentCaptor.forClass(BookingService.CreateBookingCommand.class);
+        verify(bookingService).createBooking(command.capture(), eq(actor));
+        assertThat(command.getValue().lines()).hasSize(2);
+        assertThat(command.getValue().lines().get(0).equipmentItemId()).isEqualTo(quantityItemId);
+        assertThat(command.getValue().lines().get(0).quantity()).isEqualTo(2);
+        assertThat(command.getValue().lines().get(1).equipmentItemId()).isEqualTo(unitItemId);
+        assertThat(command.getValue().lines().get(1).equipmentUnitId()).isEqualTo(unitId);
+    }
+
+    @Test
+    void bookingEquipmentSearchReturnsLimitedMatchingItems() throws Exception {
+        EquipmentItem item = item("Lens", TrackingMode.QUANTITY, 2);
+        EquipmentItem russianItem = item("Камера", TrackingMode.UNIT, 0);
+        when(itemRepository.searchActiveForBooking("Lens", PageRequest.of(0, 20))).thenReturn(List.of(item));
+        when(itemRepository.searchActiveForBooking("Кам", PageRequest.of(0, 20))).thenReturn(List.of(russianItem));
+
+        mockMvc.perform(get("/bookings/equipment-search")
+                .with(user("viewer").roles("USER"))
+                .param("lineIndex", "0")
+                .param("q", "Lens"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Lens")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/bookings/equipment-selection")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-target=\"#booking-line-0\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("search-result")));
+
+        mockMvc.perform(get("/bookings/equipment-search")
+                .with(user("viewer").roles("USER"))
+                .param("lineIndex", "0")
+                .param("q", "Кам"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Камера")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("search-result")));
+    }
+
+    @Test
+    void bookingEquipmentSearchShowsMinimumLengthPromptWithoutQuerying() throws Exception {
+        mockMvc.perform(get("/bookings/equipment-search")
+                .with(user("viewer").roles("USER"))
+                .param("lineIndex", "0")
+                .param("q", "L"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Введите минимум 2 символа для поиска.")));
+
+        verify(itemRepository, never()).searchActiveForBooking(any(), any());
+    }
+
+    @Test
+    void bookingEquipmentSearchRendersNoResultsMessage() throws Exception {
+        when(itemRepository.searchActiveForBooking("Unknown", PageRequest.of(0, 20))).thenReturn(List.of());
+
+        mockMvc.perform(get("/bookings/equipment-search")
+                .with(user("viewer").roles("USER"))
+                .param("lineIndex", "0")
+                .param("q", "Unknown"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Ничего не найдено.")));
+    }
+
+    @Test
+    void bookingUnitSelectionLoadsConcreteUnitIdentifiers() throws Exception {
+        EquipmentItem item = item("Camera", TrackingMode.UNIT, 0);
+        EquipmentUnit unit = unit(item, "CAM-001", EquipmentUnitStatus.AVAILABLE);
+        when(itemRepository.findDetailedById(item.getId())).thenReturn(Optional.of(item));
+        when(unitRepository.findByEquipmentItem_IdAndArchivedFalseOrderByInventoryNumberAsc(item.getId()))
+                .thenReturn(List.of(unit));
+
+        mockMvc.perform(get("/bookings/equipment-selection")
+                .with(user("viewer").roles("USER"))
+                .param("lineIndex", "0")
+                .param("equipmentItemId", item.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Camera")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("CAM-001")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("booking-line-0")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"Camera\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("lines[0].equipmentUnitId")));
+    }
+
+    @Test
+    void bookingLineRemovalRerendersCompactedSelectedLinesWithCsrf() throws Exception {
+        EquipmentItem firstItem = item("Lens", TrackingMode.QUANTITY, 2);
+        EquipmentItem removedItem = item("Light", TrackingMode.QUANTITY, 4);
+        EquipmentItem lastItem = item("Camera", TrackingMode.UNIT, 0);
+        EquipmentUnit lastUnit = unit(lastItem, "CAM-001", EquipmentUnitStatus.AVAILABLE);
+        when(itemRepository.findDetailedById(firstItem.getId())).thenReturn(Optional.of(firstItem));
+        when(itemRepository.findDetailedById(lastItem.getId())).thenReturn(Optional.of(lastItem));
+        when(unitRepository.findByEquipmentItem_IdAndArchivedFalseOrderByInventoryNumberAsc(lastItem.getId()))
+                .thenReturn(List.of(lastUnit));
+
+        mockMvc.perform(post("/bookings/line/remove")
+                .with(user("viewer").roles("USER"))
+                .with(csrf())
+                .param("startsAt", "2026-06-15T09:00")
+                .param("endsAt", "2026-06-15T10:00")
+                .param("removeIndex", "1")
+                .param("lines[0].equipmentItemId", firstItem.getId().toString())
+                .param("lines[0].quantity", "2")
+                .param("lines[1].equipmentItemId", removedItem.getId().toString())
+                .param("lines[1].quantity", "4")
+                .param("lines[2].equipmentItemId", lastItem.getId().toString())
+                .param("lines[2].equipmentUnitId", lastUnit.getId().toString())
+                .param("lines[2].quantity", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Lens")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Camera")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("CAM-001")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("lines[0].equipmentItemId")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("lines[1].equipmentUnitId")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Light"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("lines[2]"))));
     }
 
     @Test
@@ -360,6 +511,12 @@ class EquipmentWarehouseMvcTests {
         EquipmentItem item = new EquipmentItem(category("Production"), name, trackingMode, totalQuantity);
         ReflectionTestUtils.setField(item, "id", UUID.randomUUID());
         return item;
+    }
+
+    private EquipmentUnit unit(EquipmentItem item, String inventoryNumber, EquipmentUnitStatus status) {
+        EquipmentUnit unit = new EquipmentUnit(item, inventoryNumber, "Готово", status);
+        ReflectionTestUtils.setField(unit, "id", UUID.randomUUID());
+        return unit;
     }
 
     private User actor() {

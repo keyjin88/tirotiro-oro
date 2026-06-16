@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-add-equipment-search-indexes
+      author: cursor
+      dbms: postgresql
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              create extension if not exists pg_trgm;
+
+              create index if not exists idx_equipment_items_name_trgm
+                on equipment_items using gin (lower(name) gin_trgm_ops)
+                where active = true;
+              create index if not exists idx_equipment_items_manufacturer_trgm
+                on equipment_items using gin (lower(manufacturer) gin_trgm_ops)
+                where active = true and manufacturer is not null;
+              create index if not exists idx_equipment_items_model_trgm
+                on equipment_items using gin (lower(model) gin_trgm_ops)
+                where active = true and model is not null;
+              create index if not exists idx_equipment_categories_name_trgm
+                on equipment_categories using gin (lower(name) gin_trgm_ops);
+              create index if not exists idx_equipment_units_inventory_number_trgm
+                on equipment_units using gin (lower(inventory_number) gin_trgm_ops)
+                where archived = false;
+              create index if not exists idx_equipment_units_serial_number_trgm
+                on equipment_units using gin (lower(serial_number) gin_trgm_ops)
+                where archived = false and serial_number is not null;

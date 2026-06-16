@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<div th:fragment="searchResults"
+     th:id="|booking-line-${lineIndex}-search-results|"
+     class="search-results"
+     aria-live="polite">
+    <p class="muted" th:if="${query.length() < minSearchLength}" th:text="#{bookings.form.searchPrompt(${minSearchLength})}">
+        Введите минимум 2 символа для поиска.
+    </p>
+    <p class="muted" th:if="${query.length() >= minSearchLength && #lists.isEmpty(items)}" th:text="#{bookings.form.searchEmpty}">
+        Ничего не найдено.
+    </p>
+    <div class="search-result-list" th:if="${query.length() >= minSearchLength && !#lists.isEmpty(items)}">
+        <button type="button"
+                class="search-result"
+                th:each="item : ${items}"
+                th:attr="hx-get=@{/bookings/equipment-selection(lineIndex=${lineIndex},equipmentItemId=${item.id})},hx-target=|#booking-line-${lineIndex}|"
+                hx-swap="outerHTML">
+            <span>
+                <strong th:text="${item.name}">Оборудование</strong>
+                <span class="muted" th:text="${item.category.name}">Категория</span>
+            </span>
+            <span class="pill" th:text="${#messages.msg('enum.TrackingMode.' + item.trackingMode.name())}">Учет</span>
+        </button>
+    </div>
+</div>
+</body>
+</html>

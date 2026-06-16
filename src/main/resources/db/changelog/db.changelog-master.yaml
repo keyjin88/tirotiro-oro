@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/changes/005-create-audit-log.yaml
   - include:
       file: db/changelog/changes/006-local-demo-data.yaml
+  - include:
+      file: db/changelog/changes/007-add-equipment-search-indexes.yaml

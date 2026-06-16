@@ -9,6 +9,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,6 +25,30 @@ public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UU
     @EntityGraph(attributePaths = "category")
     @Query("select item from EquipmentItem item where item.id = :id")
     java.util.Optional<EquipmentItem> findDetailedById(@Param("id") UUID id);
+
+    @Query("""
+            select item from EquipmentItem item
+            join item.category category
+            where item.active = true
+              and (
+                lower(item.name) like lower(concat('%', :query, '%'))
+                or lower(item.manufacturer) like lower(concat('%', :query, '%'))
+                or lower(item.model) like lower(concat('%', :query, '%'))
+                or lower(category.name) like lower(concat('%', :query, '%'))
+                or exists (
+                    select unit.id from EquipmentUnit unit
+                    where unit.equipmentItem = item
+                      and unit.archived = false
+                      and (
+                        lower(unit.inventoryNumber) like lower(concat('%', :query, '%'))
+                        or lower(unit.serialNumber) like lower(concat('%', :query, '%'))
+                      )
+                )
+              )
+            order by item.name
+            """)
+    @EntityGraph(attributePaths = "category")
+    List<EquipmentItem> searchActiveForBooking(@Param("query") String query, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select item from EquipmentItem item where item.id in :ids order by item.id")

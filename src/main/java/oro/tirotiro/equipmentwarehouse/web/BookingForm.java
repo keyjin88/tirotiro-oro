@@ -3,11 +3,14 @@ package oro.tirotiro.equipmentwarehouse.web;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -25,20 +28,20 @@ public class BookingForm {
 
     private String comment;
 
-    @NotNull
-    private UUID equipmentItemId;
-
-    private UUID equipmentUnitId;
-
-    @Min(1)
-    private int quantity = 1;
+    @Size(min = 1)
+    private List<@Valid LineForm> lines = new ArrayList<>(List.of(new LineForm()));
 
     public BookingService.CreateBookingCommand toCommand(ZoneId zoneId) {
         return new BookingService.CreateBookingCommand(
                 toInstant(startsAt, zoneId),
                 toInstant(endsAt, zoneId),
                 comment,
-                List.of(new BookingService.BookingLineCommand(equipmentItemId, equipmentUnitId, quantity)));
+                lines.stream()
+                        .map(line -> new BookingService.BookingLineCommand(
+                                line.getEquipmentItemId(),
+                                line.getEquipmentUnitId(),
+                                line.getQuantity()))
+                        .toList());
     }
 
     private Instant toInstant(LocalDateTime dateTime, ZoneId zoneId) {
@@ -70,26 +73,93 @@ public class BookingForm {
     }
 
     public UUID getEquipmentItemId() {
-        return equipmentItemId;
+        return firstLine().getEquipmentItemId();
     }
 
     public void setEquipmentItemId(UUID equipmentItemId) {
-        this.equipmentItemId = equipmentItemId;
+        firstLine().setEquipmentItemId(equipmentItemId);
     }
 
     public UUID getEquipmentUnitId() {
-        return equipmentUnitId;
+        return firstLine().getEquipmentUnitId();
     }
 
     public void setEquipmentUnitId(UUID equipmentUnitId) {
-        this.equipmentUnitId = equipmentUnitId;
+        firstLine().setEquipmentUnitId(equipmentUnitId);
     }
 
     public int getQuantity() {
-        return quantity;
+        return firstLine().getQuantity();
     }
 
     public void setQuantity(int quantity) {
-        this.quantity = quantity;
+        firstLine().setQuantity(quantity);
+    }
+
+    public List<LineForm> getLines() {
+        return lines;
+    }
+
+    public void setLines(List<LineForm> lines) {
+        this.lines = lines == null ? new ArrayList<>() : lines;
+    }
+
+    public void ensureAtLeastOneLine() {
+        if (lines == null) {
+            lines = new ArrayList<>();
+        }
+        if (lines.isEmpty()) {
+            lines.add(new LineForm());
+        }
+    }
+
+    public void removeLine(int index) {
+        if (lines == null) {
+            lines = new ArrayList<>();
+        }
+        if (index >= 0 && index < lines.size()) {
+            lines.remove(index);
+        }
+        ensureAtLeastOneLine();
+    }
+
+    private LineForm firstLine() {
+        ensureAtLeastOneLine();
+        return lines.getFirst();
+    }
+
+    public static class LineForm {
+
+        @NotNull
+        private UUID equipmentItemId;
+
+        private UUID equipmentUnitId;
+
+        @Min(1)
+        private int quantity = 1;
+
+        public UUID getEquipmentItemId() {
+            return equipmentItemId;
+        }
+
+        public void setEquipmentItemId(UUID equipmentItemId) {
+            this.equipmentItemId = equipmentItemId;
+        }
+
+        public UUID getEquipmentUnitId() {
+            return equipmentUnitId;
+        }
+
+        public void setEquipmentUnitId(UUID equipmentUnitId) {
+            this.equipmentUnitId = equipmentUnitId;
+        }
+
+        public int getQuantity() {
+            return quantity;
+        }
+
+        public void setQuantity(int quantity) {
+            this.quantity = quantity;
+        }
     }
 }

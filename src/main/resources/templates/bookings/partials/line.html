@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<section th:fragment="bookingLine(lineIndex, line, selectedItem, units)"
+         th:id="|booking-line-${lineIndex}|"
+         class="booking-line card stack"
+         th:object="${form}"
+         data-booking-line>
+    <div class="booking-line-heading">
+        <h3 th:text="#{bookings.form.lineHeading(${lineIndex + 1})}">Позиция 1</h3>
+        <button type="button"
+                class="secondary danger subtle"
+                hx-post="/bookings/line/remove"
+                hx-include="closest form"
+                hx-target="#booking-lines"
+                hx-swap="outerHTML"
+                th:attr="hx-vals=|js:{removeIndex: ${lineIndex}}|"
+                th:text="#{bookings.form.removeLine}">Удалить</button>
+    </div>
+    <label>
+        <span th:text="#{bookings.form.equipmentSearch}">Поиск оборудования</span>
+        <input type="search"
+               name="q"
+               autocomplete="off"
+               th:value="${selectedItem == null ? '' : selectedItem.name}"
+               th:placeholder="#{bookings.form.searchPlaceholder}"
+               th:attr="hx-get=@{/bookings/equipment-search(lineIndex=${lineIndex})},hx-target=|#booking-line-${lineIndex}-search-results|"
+               hx-include="this"
+               hx-trigger="input changed delay:300ms, search"
+               hx-swap="outerHTML">
+    </label>
+    <div th:id="|booking-line-${lineIndex}-search-results|" class="search-results" aria-live="polite">
+        <p class="muted" th:text="#{bookings.form.searchPrompt(${minSearchLength})}">
+            Введите минимум 2 символа для поиска.
+        </p>
+    </div>
+    <div th:replace="~{bookings/partials/selection :: lineSelection(${lineIndex}, ${line}, ${selectedItem}, ${units})}"></div>
+</section>
+</body>
+</html>

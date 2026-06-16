@@ -85,6 +85,19 @@ button.danger:hover,
     background: var(--danger-strong);
 }
 
+button.danger.subtle,
+.button.danger.subtle {
+    background: var(--danger-surface);
+    border-color: var(--danger-strong);
+    color: var(--danger-text);
+}
+
+button.danger.subtle:hover,
+.button.danger.subtle:hover {
+    background: var(--danger-strong);
+    color: var(--text-strong);
+}
+
 input,
 select,
 textarea {
@@ -217,6 +230,51 @@ tbody tr:hover {
 
 .stack.compact {
     gap: 0.35rem;
+}
+
+.booking-line {
+    background: rgb(15 23 42 / 36%);
+    box-shadow: none;
+}
+
+.booking-line-heading,
+.selected-equipment,
+.search-result {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.booking-line-heading h3 {
+    margin: 0;
+}
+
+.booking-line-heading button {
+    flex-shrink: 0;
+}
+
+.search-results {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.search-result-list {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.search-result {
+    background: var(--bg-elevated);
+    border-color: var(--border);
+    color: var(--text);
+    padding: 0.6rem 0.7rem;
+    text-align: left;
+    width: 100%;
+}
+
+.search-result:hover {
+    background: var(--surface-hover);
 }
 
 .filters,
