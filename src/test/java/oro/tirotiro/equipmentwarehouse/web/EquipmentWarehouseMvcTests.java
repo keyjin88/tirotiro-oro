@@ -613,8 +613,9 @@ class EquipmentWarehouseMvcTests {
 
     @Test
     void bookingEquipmentSearchReturnsLimitedMatchingItems() throws Exception {
-        EquipmentItem item = item("Lens", TrackingMode.QUANTITY, 2);
-        EquipmentItem russianItem = item("Камера", TrackingMode.UNIT, 0);
+        User owner = actor();
+        EquipmentItem item = item("Lens", TrackingMode.QUANTITY, 2, owner);
+        EquipmentItem russianItem = item("Камера", TrackingMode.UNIT, 0, owner);
         when(itemRepository.searchActiveForBooking("Lens", PageRequest.of(0, 20))).thenReturn(List.of(item));
         when(itemRepository.searchActiveForBooking("Кам", PageRequest.of(0, 20))).thenReturn(List.of(russianItem));
 
@@ -624,6 +625,8 @@ class EquipmentWarehouseMvcTests {
                 .param("q", "Lens"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Lens")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Actor")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Количественный учет"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/bookings/equipment-selection")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-target=\"#booking-line-0\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("search-result")));
@@ -634,6 +637,8 @@ class EquipmentWarehouseMvcTests {
                 .param("q", "Кам"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Камера")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Actor")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Поштучный учет"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("search-result")));
     }
 
@@ -1026,7 +1031,12 @@ class EquipmentWarehouseMvcTests {
     }
 
     private EquipmentItem item(String name, TrackingMode trackingMode, int totalQuantity) {
+        return item(name, trackingMode, totalQuantity, actor());
+    }
+
+    private EquipmentItem item(String name, TrackingMode trackingMode, int totalQuantity, User owner) {
         EquipmentItem item = new EquipmentItem(category("Production"), name, trackingMode, totalQuantity);
+        item.assignOwner(owner);
         ReflectionTestUtils.setField(item, "id", UUID.randomUUID());
         return item;
     }

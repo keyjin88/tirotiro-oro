@@ -59,7 +59,7 @@ public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UU
               )
             order by item.name
             """)
-    @EntityGraph(attributePaths = "category")
+    @EntityGraph(attributePaths = {"category", "owner"})
     List<EquipmentItem> searchActiveForBooking(@Param("query") String query, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

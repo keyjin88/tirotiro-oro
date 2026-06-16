@@ -13,7 +13,7 @@
 
     <groupId>oro.tirotiro</groupId>
     <artifactId>tirotiro-oro</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
     <name>tirotiro-oro</name>
     <description>Equipment warehouse MVP for booking and inventory tracking.</description>
 

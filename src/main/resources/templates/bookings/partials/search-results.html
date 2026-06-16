@@ -21,7 +21,7 @@
                 <strong th:text="${item.name}">Оборудование</strong>
                 <span class="muted" th:text="${item.category.name}">Категория</span>
             </span>
-            <span class="pill" th:text="${#messages.msg('enum.TrackingMode.' + item.trackingMode.name())}">Учет</span>
+            <span class="pill" th:text="${item.owner.displayName}">Владелец</span>
         </button>
     </div>
 </div>
