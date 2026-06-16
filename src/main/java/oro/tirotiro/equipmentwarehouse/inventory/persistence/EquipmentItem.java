@@ -105,6 +105,13 @@ public class EquipmentItem extends AuditedEntity {
         this.deletedAt = deletedAt;
     }
 
+    public void restoreFromArchive() {
+        this.active = true;
+        this.deletedBy = null;
+        this.deleteReason = null;
+        this.deletedAt = null;
+    }
+
     public UUID getId() {
         return id;
     }

@@ -222,6 +222,22 @@ public class BookingController {
         return "redirect:/bookings";
     }
 
+    @PostMapping("/{bookingId}/delete")
+    public String delete(
+            @PathVariable UUID bookingId,
+            @RequestParam String reason,
+            @RequestParam(required = false) String returnUrl,
+            RedirectAttributes redirectAttributes) {
+        try {
+            bookingService.deleteBooking(bookingId, reason, currentUserService.requireCurrentUser());
+            redirectAttributes.addFlashAttribute("message", "Бронирование удалено");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        String target = sanitizeReturnUrl(returnUrl);
+        return "redirect:" + (target == null ? "/bookings" : target);
+    }
+
     private void addBookings(Model model, BookingFilter filter) {
         var actor = currentUserService.requireCurrentUser();
         model.addAttribute("bookings", bookingService.findBookings(actor, filter));

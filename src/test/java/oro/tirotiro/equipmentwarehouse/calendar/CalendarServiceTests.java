@@ -29,6 +29,7 @@ import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.TrackingMode;
+import oro.tirotiro.equipmentwarehouse.permission.PermissionService;
 
 class CalendarServiceTests {
 
@@ -42,6 +43,7 @@ class CalendarServiceTests {
                         booking("2026-06-05T09:00:00Z", "2026-06-07T18:00:00Z")));
         CalendarService calendarService = new CalendarService(
                 bookingService,
+                permissionService(false),
                 Clock.fixed(Instant.parse("2026-06-15T08:00:00Z"), ZoneOffset.UTC),
                 appProperties());
 
@@ -87,6 +89,7 @@ class CalendarServiceTests {
                 .thenReturn(List.of(booking));
         CalendarService calendarService = new CalendarService(
                 bookingService,
+                permissionService(false),
                 Clock.fixed(Instant.parse("2026-06-15T08:00:00Z"), ZoneOffset.UTC),
                 appProperties());
 
@@ -97,6 +100,7 @@ class CalendarServiceTests {
         assertThat(day.bookings()).singleElement().satisfies(summary -> {
             assertThat(summary.userDisplayName()).isEqualTo("Ирина Продюсер");
             assertThat(summary.comment()).isEqualTo("Интервью");
+            assertThat(summary.deletable()).isTrue();
             assertThat(summary.lines()).singleElement().satisfies(line -> {
                 assertThat(line.equipmentItemId()).isEqualTo(camera.getId());
                 assertThat(line.categoryName()).isEqualTo("Камеры");
@@ -134,5 +138,11 @@ class CalendarServiceTests {
                 ZoneId.of("UTC"),
                 new AppProperties.Security(false),
                 new AppProperties.BootstrapAdmin(null, null, null));
+    }
+
+    private PermissionService permissionService(boolean admin) {
+        PermissionService permissionService = mock(PermissionService.class);
+        when(permissionService.isAdmin(any(User.class))).thenReturn(admin);
+        return permissionService;
     }
 }

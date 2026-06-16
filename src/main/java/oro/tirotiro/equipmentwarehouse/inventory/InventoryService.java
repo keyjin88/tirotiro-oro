@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import oro.tirotiro.equipmentwarehouse.audit.AuditService;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingLineRepository;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
@@ -30,6 +31,7 @@ public class InventoryService {
     private final EquipmentCategoryRepository categoryRepository;
     private final EquipmentItemRepository itemRepository;
     private final EquipmentUnitRepository unitRepository;
+    private final BookingLineRepository bookingLineRepository;
     private final UserRepository userRepository;
     private final PermissionService permissionService;
     private final AuditService auditService;
@@ -39,6 +41,7 @@ public class InventoryService {
             EquipmentCategoryRepository categoryRepository,
             EquipmentItemRepository itemRepository,
             EquipmentUnitRepository unitRepository,
+            BookingLineRepository bookingLineRepository,
             UserRepository userRepository,
             PermissionService permissionService,
             AuditService auditService,
@@ -46,6 +49,7 @@ public class InventoryService {
         this.categoryRepository = categoryRepository;
         this.itemRepository = itemRepository;
         this.unitRepository = unitRepository;
+        this.bookingLineRepository = bookingLineRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.auditService = auditService;
@@ -90,6 +94,22 @@ public class InventoryService {
         auditService.record(actor, "EQUIPMENT_CATEGORY_CREATED", "EQUIPMENT_CATEGORY", category.getId(), Map.of(
                 "name", category.getName()));
         return category;
+    }
+
+    @Transactional
+    public void deleteCategory(UUID categoryId, User actor) {
+        EquipmentCategory category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + categoryId));
+        long itemCount = itemRepository.countByCategory_Id(categoryId);
+        if (itemCount > 0) {
+            throw new IllegalArgumentException(String.format(
+                    "Невозможно удалить категорию «%s»: в ней есть оборудование (%d поз.)",
+                    category.getName(),
+                    itemCount));
+        }
+        categoryRepository.delete(category);
+        auditService.record(actor, "EQUIPMENT_CATEGORY_DELETED", "EQUIPMENT_CATEGORY", categoryId, Map.of(
+                "name", category.getName()));
     }
 
     @Transactional
@@ -149,6 +169,39 @@ public class InventoryService {
         auditService.record(actor, "EQUIPMENT_ITEM_DELETED", "EQUIPMENT_ITEM", item.getId(), Map.of(
                 "reason", item.getDeleteReason()));
         return item;
+    }
+
+    @Transactional
+    public EquipmentItem restoreItem(UUID itemId, User actor) {
+        EquipmentItem item = requireItem(itemId);
+        if (item.isActive()) {
+            throw new IllegalArgumentException("Оборудование не архивировано");
+        }
+        item.restoreFromArchive();
+        auditService.record(actor, "EQUIPMENT_ITEM_RESTORED", "EQUIPMENT_ITEM", item.getId(), Map.of(
+                "name", item.getName()));
+        return item;
+    }
+
+    @Transactional
+    public void permanentlyDeleteItem(UUID itemId, String reason, User actor) {
+        EquipmentItem item = requireItem(itemId);
+        if (item.isActive()) {
+            throw new IllegalArgumentException("Сначала архивируйте оборудование");
+        }
+        long bookingLineCount = bookingLineRepository.countByEquipmentItem_Id(itemId);
+        if (bookingLineCount > 0) {
+            throw new IllegalArgumentException(String.format(
+                    "Невозможно удалить позицию «%s» безвозвратно: она используется в бронированиях (%d)",
+                    item.getName(),
+                    bookingLineCount));
+        }
+        String trimmedReason = requireText(reason, "Причина удаления");
+        auditService.record(actor, "EQUIPMENT_ITEM_PERMANENTLY_DELETED", "EQUIPMENT_ITEM", item.getId(), Map.of(
+                "name", item.getName(),
+                "reason", trimmedReason));
+        unitRepository.deleteAll(unitRepository.findByEquipmentItem_Id(itemId));
+        itemRepository.delete(item);
     }
 
     @Transactional

@@ -120,7 +120,11 @@ public class AvailabilityService {
             int bookedQuantity = occupancy.quantityByItem.getOrDefault(itemId, 0);
             int availableQuantity = item.getTotalQuantity() - bookedQuantity;
             if (requestedQuantity > availableQuantity) {
-                throw new AvailabilityException("Недостаточно количества для оборудования: " + itemId);
+                throw new AvailabilityException(String.format(
+                        "Недостаточно «%s»: запрошено %d, доступно %d",
+                        item.getName(),
+                        requestedQuantity,
+                        availableQuantity));
             }
         });
         for (UUID requestedUnitId : requestedUnitIds) {

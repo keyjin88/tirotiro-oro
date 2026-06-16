@@ -40,7 +40,7 @@ class AvailabilityServiceTests {
                 List.of(existing),
                 null))
                 .isInstanceOf(AvailabilityException.class)
-                .hasMessageContaining("Недостаточно количества");
+                .hasMessageContaining("доступно 1");
     }
 
     @Test

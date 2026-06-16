@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BookingLineRepository extends JpaRepository<BookingLine, UUID> {
 
     List<BookingLine> findByBooking_Id(UUID bookingId);
+
+    long countByEquipmentItem_Id(UUID equipmentItemId);
 }
