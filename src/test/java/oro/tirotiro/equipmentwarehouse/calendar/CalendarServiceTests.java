@@ -1,7 +1,10 @@
 package oro.tirotiro.equipmentwarehouse.calendar;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
@@ -17,9 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+import oro.tirotiro.equipmentwarehouse.booking.BookingFilter;
+import oro.tirotiro.equipmentwarehouse.booking.BookingService;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.Booking;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingLine;
-import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingRepository;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingStatus;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
@@ -30,14 +34,18 @@ class CalendarServiceTests {
 
     @Test
     void buildsCurrentMonthTilesWithBookingCountsPerDay() {
-        CalendarService calendarService = new CalendarService(
-                bookingRepositoryWith(
+        User actor = user("User");
+        BookingService bookingService = mock(BookingService.class);
+        when(bookingService.findOverlappingBookings(eq(actor), eq(BookingFilter.EMPTY), any(), any()))
+                .thenReturn(List.of(
                         booking("2026-06-02T10:00:00Z", "2026-06-02T12:00:00Z"),
-                        booking("2026-06-05T09:00:00Z", "2026-06-07T18:00:00Z")),
+                        booking("2026-06-05T09:00:00Z", "2026-06-07T18:00:00Z")));
+        CalendarService calendarService = new CalendarService(
+                bookingService,
                 Clock.fixed(Instant.parse("2026-06-15T08:00:00Z"), ZoneOffset.UTC),
                 appProperties());
 
-        CalendarService.MonthCalendar calendar = calendarService.monthCalendar(null);
+        CalendarService.MonthCalendar calendar = calendarService.monthCalendar(null, actor, BookingFilter.EMPTY);
 
         assertThat(calendar.month()).isEqualTo(YearMonth.parse("2026-06"));
         assertThat(calendar.days()).hasSize(30);
@@ -72,14 +80,18 @@ class CalendarServiceTests {
                 BookingStatus.BOOKED);
         booking.setComment("Интервью");
         booking.replaceLines(java.util.Set.of(new BookingLine(booking, camera, null, 1)));
+        BookingService bookingService = mock(BookingService.class);
+        when(bookingService.findOverlappingBookings(eq(user), eq(BookingFilter.EMPTY), any(), any()))
+                .thenReturn(List.of(booking));
         CalendarService calendarService = new CalendarService(
-                bookingRepositoryWith(booking),
+                bookingService,
                 Clock.fixed(Instant.parse("2026-06-15T08:00:00Z"), ZoneOffset.UTC),
                 appProperties());
 
-        CalendarService.DayCalendar day = calendarService.dayCalendar(LocalDate.parse("2026-06-15"));
+        CalendarService.DayCalendar day = calendarService.dayCalendar(LocalDate.parse("2026-06-15"), user, BookingFilter.EMPTY);
 
         assertThat(day.date()).isEqualTo(LocalDate.parse("2026-06-15"));
+        assertThat(day.filter()).isEqualTo(BookingFilter.EMPTY);
         assertThat(day.bookings()).singleElement().satisfies(summary -> {
             assertThat(summary.userDisplayName()).isEqualTo("Ирина Продюсер");
             assertThat(summary.comment()).isEqualTo("Интервью");
@@ -89,16 +101,7 @@ class CalendarServiceTests {
                 assertThat(line.quantity()).isEqualTo(1);
             });
         });
-    }
-
-    private BookingRepository bookingRepositoryWith(Booking... bookings) {
-        BookingRepository bookingRepository = mock(BookingRepository.class);
-        when(bookingRepository.findByStatusAndStartsAtLessThanAndEndsAtGreaterThanOrderByStartsAtAsc(
-                org.mockito.ArgumentMatchers.eq(BookingStatus.BOOKED),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any()))
-                .thenReturn(List.of(bookings));
-        return bookingRepository;
+        verify(bookingService).findOverlappingBookings(eq(user), eq(BookingFilter.EMPTY), any(), any());
     }
 
     private Booking booking(String startsAt, String endsAt) {

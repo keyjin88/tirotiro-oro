@@ -6,14 +6,22 @@ import java.util.UUID;
 
 import jakarta.persistence.LockModeType;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UUID> {
+public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UUID>, JpaSpecificationExecutor<EquipmentItem> {
+
+    @Override
+    @EntityGraph(attributePaths = "category")
+    java.util.List<EquipmentItem> findAll(Specification<EquipmentItem> spec, Sort sort);
 
     @EntityGraph(attributePaths = "category")
     List<EquipmentItem> findByActiveTrueOrderByNameAsc();
@@ -53,4 +61,8 @@ public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UU
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select item from EquipmentItem item where item.id in :ids order by item.id")
     List<EquipmentItem> lockByIdInOrderById(@Param("ids") Collection<UUID> ids);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update EquipmentItem item set item.deletedBy = null where item.deletedBy.id = :userId")
+    void clearDeletedByReferences(@Param("userId") UUID userId);
 }

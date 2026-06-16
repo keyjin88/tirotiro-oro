@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<dialog th:fragment="reasonDialog" id="reason-dialog" class="reason-dialog">
+    <form method="post" id="reason-dialog-form" class="stack">
+        <h2 id="reason-dialog-title"></h2>
+        <p id="reason-dialog-message" class="muted" hidden></p>
+        <label class="stack compact">
+            <span th:text="#{bookings.dialog.reason}">Причина</span>
+            <textarea name="reason" id="reason-dialog-reason" rows="3"></textarea>
+            <span id="reason-dialog-optional" class="muted" hidden th:text="#{bookings.dialog.reasonOptional}">Можно оставить пустым</span>
+        </label>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <div class="dialog-actions">
+            <button type="button" class="secondary btn-sm" data-dialog-close th:text="#{bookings.dialog.dismiss}">Назад</button>
+            <button type="submit" class="danger btn-sm" th:text="#{bookings.dialog.confirm}">Подтвердить</button>
+        </div>
+    </form>
+</dialog>
+</body>
+</html>

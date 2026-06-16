@@ -11,9 +11,12 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -45,6 +48,32 @@ class InventoryServiceTests {
             permissionService,
             auditService,
             Clock.fixed(NOW, ZoneOffset.UTC));
+
+    @Test
+    void findCatalogForcesActiveFilterForRegularUser() {
+        User actor = actor();
+        when(permissionService.isAdmin(actor)).thenReturn(false);
+        when(itemRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of());
+
+        inventoryService.findCatalog(
+                EquipmentCatalogFilter.of(null, null, null, CatalogActiveFilter.ARCHIVED),
+                actor);
+
+        verify(itemRepository).findAll(any(Specification.class), eq(Sort.by(Sort.Direction.ASC, "name")));
+    }
+
+    @Test
+    void findCatalogAllowsAdminArchivedFilter() {
+        User actor = actor();
+        when(permissionService.isAdmin(actor)).thenReturn(true);
+        when(itemRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of());
+
+        inventoryService.findCatalog(
+                EquipmentCatalogFilter.of("camera", null, TrackingMode.UNIT, CatalogActiveFilter.ARCHIVED),
+                actor);
+
+        verify(itemRepository).findAll(any(Specification.class), eq(Sort.by(Sort.Direction.ASC, "name")));
+    }
 
     @Test
     void createsCategoryAndRecordsAudit() {
@@ -111,6 +140,18 @@ class InventoryServiceTests {
         assertThat(item.getDeleteReason()).isEqualTo("broken");
         verify(auditService).record(eq(actor), eq("EQUIPMENT_QUANTITY_CHANGED"), eq("EQUIPMENT_ITEM"), eq(item.getId()), any());
         verify(auditService).record(eq(actor), eq("EQUIPMENT_ITEM_DELETED"), eq("EQUIPMENT_ITEM"), eq(item.getId()), any());
+    }
+
+    @Test
+    void rejectsArchivingAlreadyArchivedItem() {
+        User actor = actor();
+        EquipmentItem item = item(TrackingMode.QUANTITY);
+        item.softDelete(actor, "old reason", NOW);
+        when(itemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+
+        assertThatThrownBy(() -> inventoryService.softDeleteItem(item.getId(), "again", actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("уже архивировано");
     }
 
     @Test

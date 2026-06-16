@@ -1,7 +1,9 @@
 package oro.tirotiro.equipmentwarehouse.web;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -13,6 +15,7 @@ import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,7 +30,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityException;
+import oro.tirotiro.equipmentwarehouse.booking.BookingFilter;
 import oro.tirotiro.equipmentwarehouse.booking.BookingService;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingStatus;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemRepository;
@@ -45,6 +50,7 @@ public class BookingController {
     private final EquipmentItemRepository itemRepository;
     private final EquipmentUnitRepository unitRepository;
     private final CurrentUserService currentUserService;
+    private final BookingFilterSupport bookingFilterSupport;
     private final AppProperties appProperties;
     private final Clock clock;
 
@@ -53,25 +59,41 @@ public class BookingController {
             EquipmentItemRepository itemRepository,
             EquipmentUnitRepository unitRepository,
             CurrentUserService currentUserService,
+            BookingFilterSupport bookingFilterSupport,
             AppProperties appProperties,
             Clock clock) {
         this.bookingService = bookingService;
         this.itemRepository = itemRepository;
         this.unitRepository = unitRepository;
         this.currentUserService = currentUserService;
+        this.bookingFilterSupport = bookingFilterSupport;
         this.appProperties = appProperties;
         this.clock = clock;
     }
 
     @GetMapping
-    public String list(Model model) {
-        addBookings(model);
+    public String list(
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) UUID equipmentItemId,
+            Model model) {
+        BookingFilter filter = bookingFilterSupport.parse(status, userId, fromDate, toDate, equipmentItemId);
+        addBookings(model, filter);
         return "bookings/list";
     }
 
     @GetMapping("/table")
-    public String table(Model model) {
-        addBookings(model);
+    public String table(
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) UUID equipmentItemId,
+            Model model) {
+        BookingFilter filter = bookingFilterSupport.parse(status, userId, fromDate, toDate, equipmentItemId);
+        addBookings(model, filter);
         return "bookings/partials/table :: bookingsTable";
     }
 
@@ -167,9 +189,11 @@ public class BookingController {
         return "redirect:/bookings";
     }
 
-    private void addBookings(Model model) {
-        model.addAttribute("bookings", bookingService.visibleBookings(currentUserService.requireCurrentUser()));
+    private void addBookings(Model model, BookingFilter filter) {
+        var actor = currentUserService.requireCurrentUser();
+        model.addAttribute("bookings", bookingService.findBookings(actor, filter));
         model.addAttribute("cancelForm", new CancelBookingForm());
+        bookingFilterSupport.addFilterModel(model, actor, filter, false, null);
     }
 
     private void addFormModel(Model model, BookingForm form) {

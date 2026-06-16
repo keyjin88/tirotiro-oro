@@ -26,15 +26,21 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import oro.tirotiro.equipmentwarehouse.audit.AuditService;
+import oro.tirotiro.equipmentwarehouse.audit.persistence.AuditLogRepository;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.Role;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleCode;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleRepository;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
+import oro.tirotiro.equipmentwarehouse.booking.BookingService;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingRepository;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
+import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemRepository;
+import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnitRepository;
 import oro.tirotiro.equipmentwarehouse.permission.persistence.Permission;
 import oro.tirotiro.equipmentwarehouse.permission.persistence.PermissionCode;
 import oro.tirotiro.equipmentwarehouse.permission.persistence.UserPermission;
+import oro.tirotiro.equipmentwarehouse.permission.persistence.UserPermissionRepository;
 
 class AuthSupportTests {
 
@@ -236,7 +242,7 @@ class AuthSupportTests {
         when(userRepository.findByIdWithRolesAndPermissions(target.getId())).thenReturn(Optional.of(target));
         when(roleRepository.findByCode(RoleCode.ADMIN)).thenReturn(Optional.of(adminRole));
         when(userRepository.countByRoleCode(RoleCode.ADMIN)).thenReturn(2L);
-        UserAdministrationService service = new UserAdministrationService(userRepository, roleRepository, auditService);
+        UserAdministrationService service = userAdministrationService(userRepository, roleRepository, auditService);
 
         service.grantRole(target.getId(), RoleCode.ADMIN, actor);
         service.revokeRole(target.getId(), RoleCode.ADMIN, actor);
@@ -256,7 +262,7 @@ class AuthSupportTests {
         target.getRoles().add(role(RoleCode.ADMIN));
         when(userRepository.findByIdWithRolesAndPermissions(target.getId())).thenReturn(Optional.of(target));
         when(userRepository.countByRoleCode(RoleCode.ADMIN)).thenReturn(1L);
-        UserAdministrationService service = new UserAdministrationService(userRepository, roleRepository, auditService);
+        UserAdministrationService service = userAdministrationService(userRepository, roleRepository, auditService);
 
         assertThatThrownBy(() -> service.revokeRole(target.getId(), RoleCode.USER, actor))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -267,6 +273,106 @@ class AuthSupportTests {
 
         assertThat(target.getRoles()).extracting(Role::getCode).containsExactly(RoleCode.ADMIN);
         verifyNoInteractions(roleRepository, auditService);
+    }
+
+    @Test
+    void userAdministrationDeletesUserWithReferenceCleanupAndAudit() {
+        UserRepository userRepository = mock(UserRepository.class);
+        RoleRepository roleRepository = mock(RoleRepository.class);
+        AuditService auditService = mock(AuditService.class);
+        BookingService bookingService = mock(BookingService.class);
+        BookingRepository bookingRepository = mock(BookingRepository.class);
+        UserPermissionRepository userPermissionRepository = mock(UserPermissionRepository.class);
+        AuditLogRepository auditLogRepository = mock(AuditLogRepository.class);
+        EquipmentItemRepository equipmentItemRepository = mock(EquipmentItemRepository.class);
+        EquipmentUnitRepository equipmentUnitRepository = mock(EquipmentUnitRepository.class);
+        User actor = user("admin@example.com");
+        User target = user("target@example.com");
+        target.getRoles().add(role(RoleCode.USER));
+        when(userRepository.findByIdWithRolesAndPermissions(target.getId())).thenReturn(Optional.of(target));
+        UserAdministrationService service = new UserAdministrationService(
+                userRepository,
+                roleRepository,
+                auditService,
+                bookingService,
+                bookingRepository,
+                userPermissionRepository,
+                auditLogRepository,
+                equipmentItemRepository,
+                equipmentUnitRepository);
+
+        service.deleteUser(target.getId(), actor);
+
+        verify(bookingService).deleteAllBookingsForUser(target.getId(), actor);
+        verify(userPermissionRepository).clearGrantedByReferences(target.getId());
+        verify(userPermissionRepository).deleteByUserId(target.getId());
+        verify(bookingRepository).clearCancelledByReferences(target.getId());
+        verify(auditLogRepository).clearActorUserReferences(target.getId());
+        verify(equipmentItemRepository).clearDeletedByReferences(target.getId());
+        verify(equipmentUnitRepository).clearDeletedByReferences(target.getId());
+        verify(auditService).record(eq(actor), eq("USER_DELETED"), eq("USER"), eq(target.getId()), any());
+        verify(userRepository).delete(target);
+        assertThat(target.getRoles()).isEmpty();
+    }
+
+    @Test
+    void userAdministrationBlocksSelfDeleteAndLastAdmin() {
+        UserRepository userRepository = mock(UserRepository.class);
+        RoleRepository roleRepository = mock(RoleRepository.class);
+        AuditService auditService = mock(AuditService.class);
+        BookingService bookingService = mock(BookingService.class);
+        BookingRepository bookingRepository = mock(BookingRepository.class);
+        UserPermissionRepository userPermissionRepository = mock(UserPermissionRepository.class);
+        AuditLogRepository auditLogRepository = mock(AuditLogRepository.class);
+        EquipmentItemRepository equipmentItemRepository = mock(EquipmentItemRepository.class);
+        EquipmentUnitRepository equipmentUnitRepository = mock(EquipmentUnitRepository.class);
+        User actor = user("admin@example.com");
+        User lastAdmin = user("last-admin@example.com");
+        lastAdmin.getRoles().add(role(RoleCode.ADMIN));
+        when(userRepository.findByIdWithRolesAndPermissions(actor.getId())).thenReturn(Optional.of(actor));
+        when(userRepository.findByIdWithRolesAndPermissions(lastAdmin.getId())).thenReturn(Optional.of(lastAdmin));
+        when(userRepository.countByRoleCode(RoleCode.ADMIN)).thenReturn(1L);
+        UserAdministrationService service = new UserAdministrationService(
+                userRepository,
+                roleRepository,
+                auditService,
+                bookingService,
+                bookingRepository,
+                userPermissionRepository,
+                auditLogRepository,
+                equipmentItemRepository,
+                equipmentUnitRepository);
+
+        assertThatThrownBy(() -> service.deleteUser(actor.getId(), actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("собственную учётную запись");
+        assertThatThrownBy(() -> service.deleteUser(lastAdmin.getId(), actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("последнего администратора");
+
+        verify(userRepository, never()).delete(org.mockito.ArgumentMatchers.any());
+        verifyNoInteractions(
+                bookingService,
+                userPermissionRepository,
+                auditLogRepository,
+                equipmentItemRepository,
+                equipmentUnitRepository);
+    }
+
+    private UserAdministrationService userAdministrationService(
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            AuditService auditService) {
+        return new UserAdministrationService(
+                userRepository,
+                roleRepository,
+                auditService,
+                mock(BookingService.class),
+                mock(BookingRepository.class),
+                mock(UserPermissionRepository.class),
+                mock(AuditLogRepository.class),
+                mock(EquipmentItemRepository.class),
+                mock(EquipmentUnitRepository.class));
     }
 
     private User user(String email) {

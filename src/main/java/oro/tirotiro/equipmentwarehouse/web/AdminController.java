@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
 import oro.tirotiro.equipmentwarehouse.auth.UserAdministrationService;
+import oro.tirotiro.equipmentwarehouse.booking.BookingService;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleCode;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.InventoryService;
@@ -33,6 +34,7 @@ import oro.tirotiro.equipmentwarehouse.permission.persistence.PermissionReposito
 public class AdminController {
 
     private final InventoryService inventoryService;
+    private final BookingService bookingService;
     private final PermissionService permissionService;
     private final UserAdministrationService userAdministrationService;
     private final CurrentUserService currentUserService;
@@ -43,6 +45,7 @@ public class AdminController {
 
     public AdminController(
             InventoryService inventoryService,
+            BookingService bookingService,
             PermissionService permissionService,
             UserAdministrationService userAdministrationService,
             CurrentUserService currentUserService,
@@ -51,6 +54,7 @@ public class AdminController {
             UserRepository userRepository,
             PermissionRepository permissionRepository) {
         this.inventoryService = inventoryService;
+        this.bookingService = bookingService;
         this.permissionService = permissionService;
         this.userAdministrationService = userAdministrationService;
         this.currentUserService = currentUserService;
@@ -143,6 +147,20 @@ public class AdminController {
         return "redirect:/admin/equipment";
     }
 
+    @PostMapping("/bookings/{bookingId}/delete")
+    public String deleteBooking(
+            @PathVariable UUID bookingId,
+            @RequestParam String reason,
+            RedirectAttributes redirectAttributes) {
+        try {
+            bookingService.deleteBooking(bookingId, reason, currentUserService.requireCurrentUser());
+            redirectAttributes.addFlashAttribute("message", "Бронирование удалено");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/bookings";
+    }
+
     @GetMapping("/users")
     public String users(Model model) {
         model.addAttribute("users", userRepository.findAllWithRolesAndPermissions());
@@ -186,6 +204,17 @@ public class AdminController {
                 permissionService.revokePermission(userId, permissionCode, currentUserService.requireCurrentUser());
                 redirectAttributes.addFlashAttribute("message", "Право отозвано");
             }
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/admin/users";
+    }
+
+    @PostMapping("/users/{userId}/delete")
+    public String deleteUser(@PathVariable UUID userId, RedirectAttributes redirectAttributes) {
+        try {
+            userAdministrationService.deleteUser(userId, currentUserService.requireCurrentUser());
+            redirectAttributes.addFlashAttribute("message", "Пользователь удалён");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }

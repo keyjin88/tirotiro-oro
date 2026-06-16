@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,8 @@ import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemRepository;
+import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemSpecifications;
+import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentSearchCriteria;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnit;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnitRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnitStatus;
@@ -48,6 +51,31 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<EquipmentItem> findActiveCatalog() {
         return itemRepository.findByActiveTrueOrderByNameAsc();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EquipmentItem> findCatalog(EquipmentCatalogFilter filter, User actor) {
+        EquipmentCatalogFilter resolved = resolveCatalogFilter(filter, actor);
+        return itemRepository.findAll(
+                EquipmentItemSpecifications.fromCriteria(toSearchCriteria(resolved)),
+                Sort.by(Sort.Direction.ASC, "name"));
+    }
+
+    private EquipmentCatalogFilter resolveCatalogFilter(EquipmentCatalogFilter filter, User actor) {
+        CatalogActiveFilter activeFilter = permissionService.isAdmin(actor)
+                ? filter.activeFilter()
+                : CatalogActiveFilter.ACTIVE;
+        return EquipmentCatalogFilter.of(filter.search(), filter.categoryId(), filter.trackingMode(), activeFilter);
+    }
+
+    private EquipmentSearchCriteria toSearchCriteria(EquipmentCatalogFilter filter) {
+        Boolean active = switch (filter.activeFilter()) {
+            case ACTIVE -> true;
+            case ARCHIVED -> false;
+            case ALL -> null;
+        };
+        String search = filter.filterBySearch() ? filter.search().trim() : null;
+        return new EquipmentSearchCriteria(search, filter.categoryId(), filter.trackingMode(), active);
     }
 
     @Transactional
@@ -107,6 +135,9 @@ public class InventoryService {
     @Transactional
     public EquipmentItem softDeleteItem(UUID itemId, String reason, User actor) {
         EquipmentItem item = requireItem(itemId);
+        if (!item.isActive()) {
+            throw new IllegalArgumentException("Оборудование уже архивировано");
+        }
         item.softDelete(actor, requireText(reason, "Причина удаления"), clock.instant());
         auditService.record(actor, "EQUIPMENT_ITEM_DELETED", "EQUIPMENT_ITEM", item.getId(), Map.of(
                 "reason", item.getDeleteReason()));

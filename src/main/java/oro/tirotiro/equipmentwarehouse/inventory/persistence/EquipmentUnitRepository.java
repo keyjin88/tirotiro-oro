@@ -9,6 +9,7 @@ import jakarta.persistence.LockModeType;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -23,4 +24,8 @@ public interface EquipmentUnitRepository extends JpaRepository<EquipmentUnit, UU
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select unit from EquipmentUnit unit where unit.id in :ids order by unit.id")
     List<EquipmentUnit> lockByIdInOrderById(@Param("ids") Collection<UUID> ids);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update EquipmentUnit unit set unit.deletedBy = null where unit.deletedBy.id = :userId")
+    void clearDeletedByReferences(@Param("userId") UUID userId);
 }
