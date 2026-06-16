@@ -55,9 +55,34 @@
         </form>
     </section>
     <section class="card">
+        <h2 th:text="#{admin.equipment.categories}">Категории</h2>
+        <table>
+            <thead><tr><th th:text="#{admin.equipment.name}">Название</th><th th:text="#{admin.equipment.description}">Описание</th><th th:text="#{admin.equipment.deleteCategory}">Удалить</th></tr></thead>
+            <tbody>
+            <tr th:each="category : ${categories}">
+                <td th:text="${category.name}">Категория</td>
+                <td th:text="${category.description ?: '—'}">Описание</td>
+                <td class="actions">
+                    <button type="button"
+                            class="danger subtle btn-sm"
+                            data-reason-dialog
+                            th:data-action="@{/admin/categories/{id}/delete(id=${category.id})}"
+                            th:data-title="#{admin.equipment.dialog.deleteCategory.title}"
+                            th:data-message="${#messages.msg('confirm.admin.categories.delete', category.name)}"
+                            data-reason-required="false"
+                            th:text="#{admin.equipment.deleteCategory}">Удалить</button>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(categories)}">
+                <td colspan="3" class="empty" th:text="#{admin.equipment.categoriesEmpty}">Категорий пока нет.</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+    <section class="card">
         <h2 th:text="#{admin.equipment.catalogAdministration}">Администрирование каталога</h2>
         <table>
-            <thead><tr><th th:text="#{admin.equipment.name}">Название</th><th th:text="#{admin.equipment.category}">Категория</th><th th:text="#{admin.equipment.tracking}">Учет</th><th th:text="#{admin.equipment.active}">Активно</th><th th:text="#{admin.equipment.addUnit}">Добавить единицу</th><th th:text="#{admin.equipment.archive}">Архивировать</th></tr></thead>
+            <thead><tr><th th:text="#{admin.equipment.name}">Название</th><th th:text="#{admin.equipment.category}">Категория</th><th th:text="#{admin.equipment.tracking}">Учет</th><th th:text="#{admin.equipment.active}">Активно</th><th th:text="#{admin.equipment.addUnit}">Добавить единицу</th><th th:text="#{admin.equipment.actions}">Действия</th></tr></thead>
             <tbody>
             <tr th:each="item : ${items}">
                 <td><a th:href="@{/equipment/{id}(id=${item.id})}" th:text="${item.name}">Позиция</a></td>
@@ -83,6 +108,24 @@
                             th:data-message="${#messages.msg('confirm.admin.equipment.delete', item.name)}"
                             data-reason-required="true"
                             th:text="#{admin.equipment.archive}">Архивировать</button>
+                    <button th:if="${!item.active}"
+                            type="button"
+                            class="secondary subtle btn-sm"
+                            data-reason-dialog
+                            th:data-action="@{/admin/equipment/{id}/restore(id=${item.id})}"
+                            th:data-title="#{admin.equipment.dialog.restore.title}"
+                            th:data-message="${#messages.msg('confirm.admin.equipment.restore', item.name)}"
+                            data-reason-required="false"
+                            th:text="#{admin.equipment.restore}">Восстановить</button>
+                    <button th:if="${!item.active}"
+                            type="button"
+                            class="danger subtle btn-sm"
+                            data-reason-dialog
+                            th:data-action="@{/admin/equipment/{id}/permanent-delete(id=${item.id})}"
+                            th:data-title="#{admin.equipment.dialog.permanentDelete.title}"
+                            th:data-message="${#messages.msg('confirm.admin.equipment.permanentDelete', item.name)}"
+                            data-reason-required="true"
+                            th:text="#{admin.equipment.permanentDelete}">Удалить навсегда</button>
                 </td>
             </tr>
             </tbody>

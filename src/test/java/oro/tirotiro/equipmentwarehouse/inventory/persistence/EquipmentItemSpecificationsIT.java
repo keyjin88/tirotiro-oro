@@ -2,8 +2,7 @@ package oro.tirotiro.equipmentwarehouse.inventory.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +15,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingLineRepository;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingRepository;
 
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = {
@@ -46,24 +47,38 @@ class EquipmentItemSpecificationsIT {
     private EquipmentItemRepository itemRepository;
 
     @Autowired
+    private EquipmentUnitRepository unitRepository;
+
+    @Autowired
+    private BookingLineRepository bookingLineRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
-    private User bootstrapUser() {
-        return userRepository.findByEmailIgnoreCase("bootstrap-it@example.com").orElseThrow();
-    }
+    private EquipmentCategory cameras;
+    private EquipmentCategory lights;
 
-    @Test
-    void filtersCatalogBySearchCategoryTrackingModeAndActiveStatus() {
+    @BeforeEach
+    void setUp() {
+        clearCatalog();
         User owner = bootstrapUser();
-        EquipmentCategory cameras = categoryRepository.save(new EquipmentCategory("Cameras", null));
-        EquipmentCategory lights = categoryRepository.save(new EquipmentCategory("Lights", null));
+        cameras = categoryRepository.save(new EquipmentCategory("Cameras", null));
+        lights = categoryRepository.save(new EquipmentCategory("Lights", null));
 
         EquipmentItem activeCamera = itemRepository.save(item(cameras, "Sony Camera", TrackingMode.UNIT, 0, owner));
         EquipmentItem archivedCamera = itemRepository.save(item(cameras, "Old Camera", TrackingMode.QUANTITY, 1, owner));
         archivedCamera.softDelete(null, "retired", java.time.Instant.parse("2026-06-01T00:00:00Z"));
         itemRepository.save(archivedCamera);
-        EquipmentItem light = itemRepository.save(item(lights, "LED Panel", TrackingMode.QUANTITY, 3, owner));
+        itemRepository.save(item(lights, "LED Panel", TrackingMode.QUANTITY, 3, owner));
 
+        assertThat(activeCamera.getId()).isNotNull();
+    }
+
+    @Test
+    void filtersCatalogBySearchCategoryTrackingModeAndActiveStatus() {
         assertThat(itemRepository.findAll(
                 EquipmentItemSpecifications.fromCriteria(new EquipmentSearchCriteria("Sony", null, null, true)),
                 Sort.by("name")))
@@ -93,6 +108,18 @@ class EquipmentItemSpecificationsIT {
                 Sort.by("name")))
                 .extracting(EquipmentItem::getName)
                 .containsExactly("LED Panel", "Old Camera", "Sony Camera");
+    }
+
+    private void clearCatalog() {
+        bookingLineRepository.deleteAllInBatch();
+        bookingRepository.deleteAllInBatch();
+        unitRepository.deleteAllInBatch();
+        itemRepository.deleteAllInBatch();
+        categoryRepository.deleteAllInBatch();
+    }
+
+    private User bootstrapUser() {
+        return userRepository.findByEmailIgnoreCase("bootstrap-it@example.com").orElseThrow();
     }
 
     private EquipmentItem item(

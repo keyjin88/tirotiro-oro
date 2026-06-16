@@ -17,6 +17,20 @@ echo "==> Target: ${REMOTE}:${REMOTE_DIR}"
 echo "==> Ensuring remote directory exists"
 ssh "${REMOTE}" "mkdir -p '${REMOTE_DIR}'"
 
+echo "==> Stopping running stack on server (keeps postgres volume and .env)"
+ssh "${REMOTE}" bash -s <<EOF
+set -euo pipefail
+cd '${REMOTE_DIR}'
+if [[ -f '${COMPOSE_FILE}' ]] && docker compose -f '${COMPOSE_FILE}' ps -q 2>/dev/null | grep -q .; then
+  echo "Stopping app gracefully (30s timeout)..."
+  docker compose -f '${COMPOSE_FILE}' stop -t 30 app || true
+  echo "Bringing stack down (containers only; volumes and .env preserved)..."
+  docker compose -f '${COMPOSE_FILE}' down --remove-orphans
+else
+  echo "No running stack found; skipping stop."
+fi
+EOF
+
 echo "==> Syncing files (excluding .git, target, secrets)"
 rsync -avz --delete \
   --exclude '.git/' \

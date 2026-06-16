@@ -345,6 +345,85 @@ class EquipmentWarehouseMvcTests {
     }
 
     @Test
+    void adminEquipmentRestoreDelegatesToInventoryService() throws Exception {
+        UUID itemId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/admin/equipment/{id}/restore", itemId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/equipment"));
+
+        verify(inventoryService).restoreItem(itemId, actor);
+    }
+
+    @Test
+    void adminEquipmentRestoreRequiresCsrfToken() throws Exception {
+        UUID itemId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/equipment/{id}/restore", itemId)
+                .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isForbidden());
+
+        verify(inventoryService, never()).restoreItem(any(), any());
+    }
+
+    @Test
+    void adminEquipmentRestoreRequiresAdminRole() throws Exception {
+        UUID itemId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/equipment/{id}/restore", itemId)
+                .with(user("operator").roles("USER"))
+                .with(csrf()))
+                .andExpect(status().isForbidden());
+
+        verify(inventoryService, never()).restoreItem(any(), any());
+    }
+
+    @Test
+    void adminEquipmentPermanentDeleteDelegatesToInventoryService() throws Exception {
+        UUID itemId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/admin/equipment/{id}/permanent-delete", itemId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .param("reason", "duplicate entry"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/equipment"));
+
+        verify(inventoryService).permanentlyDeleteItem(itemId, "duplicate entry", actor);
+    }
+
+    @Test
+    void adminEquipmentPermanentDeleteRequiresCsrfToken() throws Exception {
+        UUID itemId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/equipment/{id}/permanent-delete", itemId)
+                .with(user("admin").roles("ADMIN"))
+                .param("reason", "cleanup"))
+                .andExpect(status().isForbidden());
+
+        verify(inventoryService, never()).permanentlyDeleteItem(any(), any(), any());
+    }
+
+    @Test
+    void adminEquipmentPermanentDeleteRequiresAdminRole() throws Exception {
+        UUID itemId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/equipment/{id}/permanent-delete", itemId)
+                .with(user("operator").roles("USER"))
+                .with(csrf())
+                .param("reason", "cleanup"))
+                .andExpect(status().isForbidden());
+
+        verify(inventoryService, never()).permanentlyDeleteItem(any(), any(), any());
+    }
+
+    @Test
     void equipmentCreationPageAllowsEquipmentCreateAuthority() throws Exception {
         User actor = actor();
         EquipmentCategory category = category("Cameras");
@@ -359,6 +438,28 @@ class EquipmentWarehouseMvcTests {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Владелец")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Actor")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("selected=\"selected\"")));
+    }
+
+    @Test
+    void equipmentCreationPageRendersDistinctOwnerOptionValues() throws Exception {
+        User actor = actor();
+        User otherOwner = new User("other@example.com", "hash", "Other User");
+        ReflectionTestUtils.setField(otherOwner, "id", UUID.fromString("11111111-1111-1111-1111-111111111111"));
+        EquipmentCategory category = category("Cameras");
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(categoryRepository.findAll()).thenReturn(List.of(category));
+        when(userRepository.findAllByEnabledTrueOrderByDisplayNameAsc()).thenReturn(List.of(actor, otherOwner));
+
+        String html = mockMvc.perform(get("/equipment/new").with(user("creator").authorities(() -> "EQUIPMENT_CREATE")))
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html).contains("value=\"" + actor.getId() + "\"");
+        assertThat(html).contains("value=\"11111111-1111-1111-1111-111111111111\"");
+        assertThat(html).contains("selected=\"selected\"");
     }
 
     @Test
@@ -512,8 +613,9 @@ class EquipmentWarehouseMvcTests {
 
     @Test
     void bookingEquipmentSearchReturnsLimitedMatchingItems() throws Exception {
-        EquipmentItem item = item("Lens", TrackingMode.QUANTITY, 2);
-        EquipmentItem russianItem = item("Камера", TrackingMode.UNIT, 0);
+        User owner = actor();
+        EquipmentItem item = item("Lens", TrackingMode.QUANTITY, 2, owner);
+        EquipmentItem russianItem = item("Камера", TrackingMode.UNIT, 0, owner);
         when(itemRepository.searchActiveForBooking("Lens", PageRequest.of(0, 20))).thenReturn(List.of(item));
         when(itemRepository.searchActiveForBooking("Кам", PageRequest.of(0, 20))).thenReturn(List.of(russianItem));
 
@@ -523,6 +625,8 @@ class EquipmentWarehouseMvcTests {
                 .param("q", "Lens"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Lens")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Actor")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Количественный учет"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/bookings/equipment-selection")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-target=\"#booking-line-0\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("search-result")));
@@ -533,6 +637,8 @@ class EquipmentWarehouseMvcTests {
                 .param("q", "Кам"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Камера")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Actor")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Поштучный учет"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("search-result")));
     }
 
@@ -677,7 +783,8 @@ class EquipmentWarehouseMvcTests {
                 Instant.parse("2026-06-15T12:00:00Z"),
                 "Actor",
                 "Интервью",
-                List.of(line));
+                List.of(line),
+                true);
         CalendarService.DayCalendar day = new CalendarService.DayCalendar(
                 LocalDate.parse("2026-06-15"),
                 YearMonth.parse("2026-06"),
@@ -694,7 +801,102 @@ class EquipmentWarehouseMvcTests {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"booking-dialog\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/equipment/" + itemId)))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Sony FX6")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Владелец: Owner User")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Владелец: Owner User")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-reason-dialog")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/bookings/" + booking.id() + "/delete")));
+    }
+
+    @Test
+    void calendarDayHidesDeleteButtonForOtherUsersBooking() throws Exception {
+        User actor = actor();
+        BookingFilter filter = BookingFilter.EMPTY;
+        CalendarService.BookingSummary booking = new CalendarService.BookingSummary(
+                UUID.randomUUID(),
+                Instant.parse("2026-06-15T10:00:00Z"),
+                Instant.parse("2026-06-15T12:00:00Z"),
+                "Other User",
+                null,
+                List.of(),
+                false);
+        CalendarService.DayCalendar day = new CalendarService.DayCalendar(
+                LocalDate.parse("2026-06-15"),
+                YearMonth.parse("2026-06"),
+                List.of(booking),
+                filter);
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(calendarService.dayCalendar(LocalDate.parse("2026-06-15"), actor, filter)).thenReturn(day);
+        when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of());
+
+        mockMvc.perform(get("/calendar/day/2026-06-15").with(user("viewer").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("/bookings/" + booking.id() + "/delete"))));
+    }
+
+    @Test
+    void bookingDeleteFromCalendarRedirectsBackToDay() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/bookings/{id}/delete", bookingId)
+                .with(user("viewer").roles("USER"))
+                .with(csrf())
+                .param("reason", "mistake")
+                .param("returnUrl", "/calendar/day/2026-06-15"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/calendar/day/2026-06-15"));
+
+        verify(bookingService).deleteBooking(bookingId, "mistake", actor);
+    }
+
+    @Test
+    void bookingDeleteRequiresCsrfToken() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+
+        mockMvc.perform(post("/bookings/{id}/delete", bookingId)
+                .with(user("viewer").roles("USER"))
+                .param("reason", "cleanup"))
+                .andExpect(status().isForbidden());
+
+        verify(bookingService, never()).deleteBooking(any(), any(), any());
+    }
+
+    @Test
+    void adminCategoryDeleteDelegatesToInventoryService() throws Exception {
+        UUID categoryId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/admin/categories/{id}/delete", categoryId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/equipment"));
+
+        verify(inventoryService).deleteCategory(categoryId, actor);
+    }
+
+    @Test
+    void adminCategoryDeleteRequiresAdminRole() throws Exception {
+        UUID categoryId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/categories/{id}/delete", categoryId)
+                .with(user("operator").roles("USER"))
+                .with(csrf()))
+                .andExpect(status().isForbidden());
+
+        verify(inventoryService, never()).deleteCategory(any(), any());
+    }
+
+    @Test
+    void adminCategoryDeleteRequiresCsrfToken() throws Exception {
+        UUID categoryId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/categories/{id}/delete", categoryId)
+                .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isForbidden());
+
+        verify(inventoryService, never()).deleteCategory(any(), any());
     }
 
     @Test
@@ -829,7 +1031,12 @@ class EquipmentWarehouseMvcTests {
     }
 
     private EquipmentItem item(String name, TrackingMode trackingMode, int totalQuantity) {
+        return item(name, trackingMode, totalQuantity, actor());
+    }
+
+    private EquipmentItem item(String name, TrackingMode trackingMode, int totalQuantity, User owner) {
         EquipmentItem item = new EquipmentItem(category("Production"), name, trackingMode, totalQuantity);
+        item.assignOwner(owner);
         ReflectionTestUtils.setField(item, "id", UUID.randomUUID());
         return item;
     }

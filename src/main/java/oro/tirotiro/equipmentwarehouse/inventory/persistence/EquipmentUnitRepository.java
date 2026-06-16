@@ -19,6 +19,8 @@ public interface EquipmentUnitRepository extends JpaRepository<EquipmentUnit, UU
 
     List<EquipmentUnit> findByEquipmentItem_IdAndArchivedFalseOrderByInventoryNumberAsc(UUID equipmentItemId);
 
+    List<EquipmentUnit> findByEquipmentItem_Id(UUID equipmentItemId);
+
     Optional<EquipmentUnit> findByInventoryNumber(String inventoryNumber);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -69,16 +69,34 @@ Ensure `.env` exists on the server before starting the stack.
 
 ## Start / update stack
 
-On the server:
+### From your workstation (recommended)
+
+`scripts/update-remote.sh` rsyncs the repo to the VPS, stops the running stack (graceful app shutdown, then `docker compose down` without removing volumes or `.env`), rebuilds the app image, and starts the stack again:
+
+```bash
+cd /path/to/tirotiro-oro
+./scripts/update-remote.sh
+# Optional overrides: DEPLOY_HOST, DEPLOY_USER, REMOTE_DIR
+```
+
+### On the server
 
 ```bash
 cd /opt/tirotiro-oro
-docker compose -f docker-compose.prod.yml up -d --build
+./scripts/deploy-regru-remote.sh
+```
+
+Or manually (same stop → build → up sequence):
+
+```bash
+cd /opt/tirotiro-oro
+docker compose -f docker-compose.prod.yml stop -t 30 app
+docker compose -f docker-compose.prod.yml down --remove-orphans
+docker compose -f docker-compose.prod.yml build app
+docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f app
 ```
-
-Or run `scripts/deploy-regru-remote.sh` on the server (same commands).
 
 ## HTTP on port 80 (nginx)
 

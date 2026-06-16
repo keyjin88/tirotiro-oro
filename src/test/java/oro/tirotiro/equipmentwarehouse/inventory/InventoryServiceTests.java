@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +24,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import oro.tirotiro.equipmentwarehouse.audit.AuditService;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingLineRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
@@ -40,6 +42,7 @@ class InventoryServiceTests {
     private final EquipmentCategoryRepository categoryRepository = mock(EquipmentCategoryRepository.class);
     private final EquipmentItemRepository itemRepository = mock(EquipmentItemRepository.class);
     private final EquipmentUnitRepository unitRepository = mock(EquipmentUnitRepository.class);
+    private final BookingLineRepository bookingLineRepository = mock(BookingLineRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PermissionService permissionService = mock(PermissionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -47,6 +50,7 @@ class InventoryServiceTests {
             categoryRepository,
             itemRepository,
             unitRepository,
+            bookingLineRepository,
             userRepository,
             permissionService,
             auditService,
@@ -76,6 +80,35 @@ class InventoryServiceTests {
                 actor);
 
         verify(itemRepository).findAll(any(Specification.class), eq(Sort.by(Sort.Direction.ASC, "name")));
+    }
+
+    @Test
+    void deletesEmptyCategoryAndRecordsAudit() {
+        User actor = actor();
+        EquipmentCategory category = category();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(itemRepository.countByCategory_Id(category.getId())).thenReturn(0L);
+
+        inventoryService.deleteCategory(category.getId(), actor);
+
+        verify(categoryRepository).delete(category);
+        verify(auditService).record(eq(actor), eq("EQUIPMENT_CATEGORY_DELETED"), eq("EQUIPMENT_CATEGORY"),
+                eq(category.getId()), any());
+    }
+
+    @Test
+    void rejectsCategoryDeleteWhenItemsExist() {
+        User actor = actor();
+        EquipmentCategory category = category();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(itemRepository.countByCategory_Id(category.getId())).thenReturn(2L);
+
+        assertThatThrownBy(() -> inventoryService.deleteCategory(category.getId(), actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cameras")
+                .hasMessageContaining("2 поз.");
+
+        verify(categoryRepository, never()).delete(any());
     }
 
     @Test
@@ -115,6 +148,25 @@ class InventoryServiceTests {
         assertThat(item.getOwner()).isEqualTo(owner);
         verify(permissionService).requireEquipmentCreate(actor);
         verify(auditService).record(eq(actor), eq("EQUIPMENT_ITEM_CREATED"), eq("EQUIPMENT_ITEM"), eq(item.getId()), any());
+    }
+
+    @Test
+    void createsItemWithExplicitOwnerDifferentFromActor() {
+        User actor = actor();
+        User otherOwner = new User("owner@example.com", "hash", "Other Owner");
+        ReflectionTestUtils.setField(otherOwner, "id", UUID.randomUUID());
+        EquipmentCategory category = category();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(userRepository.findById(otherOwner.getId())).thenReturn(Optional.of(otherOwner));
+        when(itemRepository.save(any(EquipmentItem.class))).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        EquipmentItem item = inventoryService.createItem(
+                new InventoryService.CreateItemCommand(
+                        category.getId(), "Camera", null, null, null, TrackingMode.QUANTITY, 1, otherOwner.getId()),
+                actor);
+
+        assertThat(item.getOwner()).isEqualTo(otherOwner);
+        assertThat(item.getOwner().getId()).isNotEqualTo(actor.getId());
     }
 
     @Test
@@ -211,6 +263,81 @@ class InventoryServiceTests {
         assertThatThrownBy(() -> inventoryService.softDeleteItem(item.getId(), "again", actor))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("уже архивировано");
+    }
+
+    @Test
+    void restoresArchivedItemAndRecordsAudit() {
+        User actor = actor();
+        EquipmentItem item = item(TrackingMode.QUANTITY);
+        item.softDelete(actor, "retired", NOW);
+        when(itemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+
+        EquipmentItem restored = inventoryService.restoreItem(item.getId(), actor);
+
+        assertThat(restored.isActive()).isTrue();
+        assertThat(restored.getDeleteReason()).isNull();
+        assertThat(restored.getDeletedAt()).isNull();
+        assertThat(restored.getDeletedBy()).isNull();
+        verify(auditService).record(eq(actor), eq("EQUIPMENT_ITEM_RESTORED"), eq("EQUIPMENT_ITEM"), eq(item.getId()), any());
+    }
+
+    @Test
+    void rejectsRestoreForActiveItem() {
+        User actor = actor();
+        EquipmentItem item = item(TrackingMode.QUANTITY);
+        when(itemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+
+        assertThatThrownBy(() -> inventoryService.restoreItem(item.getId(), actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("не архивировано");
+    }
+
+    @Test
+    void permanentlyDeletesArchivedItemWithoutBookings() {
+        User actor = actor();
+        EquipmentItem item = item(TrackingMode.UNIT);
+        item.softDelete(actor, "retired", NOW);
+        when(itemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+        when(bookingLineRepository.countByEquipmentItem_Id(item.getId())).thenReturn(0L);
+        when(unitRepository.findByEquipmentItem_Id(item.getId())).thenReturn(List.of());
+
+        inventoryService.permanentlyDeleteItem(item.getId(), "duplicate", actor);
+
+        verify(auditService).record(eq(actor), eq("EQUIPMENT_ITEM_PERMANENTLY_DELETED"), eq("EQUIPMENT_ITEM"),
+                eq(item.getId()), any());
+        verify(unitRepository).deleteAll(List.of());
+        verify(itemRepository).delete(item);
+    }
+
+    @Test
+    void rejectsPermanentDeleteWhenBookingsExist() {
+        User actor = actor();
+        EquipmentItem item = item(TrackingMode.QUANTITY);
+        item.softDelete(actor, "retired", NOW);
+        when(itemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+        when(bookingLineRepository.countByEquipmentItem_Id(item.getId())).thenReturn(2L);
+
+        assertThatThrownBy(() -> inventoryService.permanentlyDeleteItem(item.getId(), "cleanup", actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Camera")
+                .hasMessageContaining("бронированиях")
+                .hasMessageContaining("2");
+
+        verify(itemRepository, never()).delete(any(EquipmentItem.class));
+        verify(unitRepository, never()).deleteAll(any());
+    }
+
+    @Test
+    void rejectsPermanentDeleteForActiveItem() {
+        User actor = actor();
+        EquipmentItem item = item(TrackingMode.QUANTITY);
+        when(itemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+
+        assertThatThrownBy(() -> inventoryService.permanentlyDeleteItem(item.getId(), "cleanup", actor))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Сначала архивируйте");
+
+        verify(itemRepository, never()).delete(any(EquipmentItem.class));
     }
 
     @Test

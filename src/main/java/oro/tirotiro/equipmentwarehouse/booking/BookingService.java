@@ -231,14 +231,16 @@ public class BookingService {
 
     @Transactional
     public void deleteBooking(UUID bookingId, String reason, User actor) {
-        if (!permissionService.isAdmin(actor)) {
-            throw new AccessDeniedException("Удалять бронирования могут только администраторы");
+        Booking booking = requireBooking(bookingId);
+        boolean admin = permissionService.isAdmin(actor);
+        if (!admin && !booking.getUser().getId().equals(actor.getId())) {
+            throw new AccessDeniedException("Удалять бронирование могут только его автор или администратор");
         }
         if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("Администратор должен указать причину удаления");
+            throw new IllegalArgumentException("Необходимо указать причину удаления");
         }
 
-        hardDeleteBooking(requireBooking(bookingId), actor, reason);
+        hardDeleteBooking(booking, actor, reason);
     }
 
     @Transactional

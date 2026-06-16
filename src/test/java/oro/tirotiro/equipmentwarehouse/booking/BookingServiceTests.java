@@ -173,15 +173,17 @@ class BookingServiceTests {
     }
 
     @Test
-    void deleteBookingRequiresAdminAndReason() {
+    void deleteBookingRequiresOwnerOrAdminAndReason() {
         BookingRepository bookingRepository = mock(BookingRepository.class);
         PermissionService permissionService = mock(PermissionService.class);
         BookingService bookingService = bookingService(bookingRepository, permissionService);
         User actor = user();
+        User other = user();
         UUID bookingId = UUID.randomUUID();
-        Booking booking = new Booking(actor, START, END, BookingStatus.BOOKED);
+        Booking booking = new Booking(other, START, END, BookingStatus.BOOKED);
         ReflectionTestUtils.setField(booking, "id", bookingId);
 
+        when(bookingRepository.findById(bookingId)).thenReturn(java.util.Optional.of(booking));
         when(permissionService.isAdmin(actor)).thenReturn(false);
         assertThatThrownBy(() -> bookingService.deleteBooking(bookingId, "duplicate", actor))
                 .isInstanceOf(AccessDeniedException.class);
@@ -192,6 +194,24 @@ class BookingServiceTests {
                 .hasMessageContaining("причину удаления");
 
         verify(bookingRepository, never()).delete(any(Booking.class));
+    }
+
+    @Test
+    void deleteBookingAllowsOwner() {
+        BookingRepository bookingRepository = mock(BookingRepository.class);
+        PermissionService permissionService = mock(PermissionService.class);
+        BookingService bookingService = bookingService(bookingRepository, permissionService);
+        User actor = user();
+        UUID bookingId = UUID.randomUUID();
+        Booking booking = new Booking(actor, START, END, BookingStatus.BOOKED);
+        ReflectionTestUtils.setField(booking, "id", bookingId);
+
+        when(bookingRepository.findById(bookingId)).thenReturn(java.util.Optional.of(booking));
+        when(permissionService.isAdmin(actor)).thenReturn(false);
+
+        bookingService.deleteBooking(bookingId, "mistake", actor);
+
+        verify(bookingRepository).delete(booking);
     }
 
     @Test

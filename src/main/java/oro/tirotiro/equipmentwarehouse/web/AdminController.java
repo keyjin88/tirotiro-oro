@@ -94,6 +94,19 @@ public class AdminController {
         return "redirect:/admin/equipment";
     }
 
+    @PostMapping("/categories/{categoryId}/delete")
+    public String deleteCategory(
+            @PathVariable UUID categoryId,
+            RedirectAttributes redirectAttributes) {
+        try {
+            inventoryService.deleteCategory(categoryId, currentUserService.requireCurrentUser());
+            redirectAttributes.addFlashAttribute("message", "Категория удалена");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/admin/equipment";
+    }
+
     @PostMapping("/equipment")
     public String createEquipment(
             @Valid @ModelAttribute("equipmentForm") EquipmentForm form,
@@ -141,6 +154,33 @@ public class AdminController {
         try {
             inventoryService.softDeleteItem(itemId, reason, currentUserService.requireCurrentUser());
             redirectAttributes.addFlashAttribute("message", "Оборудование архивировано");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/admin/equipment";
+    }
+
+    @PostMapping("/equipment/{itemId}/restore")
+    public String restoreEquipment(
+            @PathVariable UUID itemId,
+            RedirectAttributes redirectAttributes) {
+        try {
+            inventoryService.restoreItem(itemId, currentUserService.requireCurrentUser());
+            redirectAttributes.addFlashAttribute("message", "Оборудование восстановлено");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/admin/equipment";
+    }
+
+    @PostMapping("/equipment/{itemId}/permanent-delete")
+    public String permanentlyDeleteEquipment(
+            @PathVariable UUID itemId,
+            @RequestParam String reason,
+            RedirectAttributes redirectAttributes) {
+        try {
+            inventoryService.permanentlyDeleteItem(itemId, reason, currentUserService.requireCurrentUser());
+            redirectAttributes.addFlashAttribute("message", "Оборудование удалено безвозвратно");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }

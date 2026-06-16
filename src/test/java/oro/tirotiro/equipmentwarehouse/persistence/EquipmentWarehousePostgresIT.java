@@ -134,7 +134,7 @@ class EquipmentWarehousePostgresIT {
                 command(item, START.plusSeconds(300), END.plusSeconds(300), "overlap"),
                 actor))
                 .isInstanceOf(AvailabilityException.class)
-                .hasMessageContaining(item.getId().toString());
+                .hasMessageContaining("доступно 0");
 
         bookingService.cancelBooking(booking.getId(), "not needed", actor);
 

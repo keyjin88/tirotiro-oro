@@ -28,6 +28,7 @@
                 <th th:text="#{calendar.day.user}">Пользователь</th>
                 <th th:text="#{calendar.day.items}">Оборудование</th>
                 <th th:text="#{calendar.day.comment}">Комментарий</th>
+                <th th:text="#{calendar.day.delete}">Удаление</th>
             </tr>
             </thead>
             <tbody>
@@ -52,14 +53,27 @@
                     </div>
                 </td>
                 <td th:text="${booking.comment ?: #messages.msg('calendar.day.noComment')}">Комментарий</td>
+                <td class="actions">
+                    <button th:if="${booking.deletable}"
+                            type="button"
+                            class="danger subtle btn-sm"
+                            data-reason-dialog
+                            th:with="returnUrl=@{/calendar/day/{date}(date=${day.date}, status=${day.filter.status}, userId=${day.filter.userId}, fromDate=${day.filter.fromDate}, toDate=${day.filter.toDate}, equipmentItemId=${day.filter.equipmentItemId})}"
+                            th:data-action="@{/bookings/{id}/delete(id=${booking.id}, returnUrl=${returnUrl})}"
+                            th:data-title="#{bookings.dialog.delete.title}"
+                            th:data-message="#{confirm.admin.bookings.delete}"
+                            data-reason-required="true"
+                            th:text="#{calendar.day.deleteButton}">Удалить</button>
+                </td>
             </tr>
             <tr th:if="${#lists.isEmpty(day.bookings)}">
-                <td colspan="4" class="empty" th:text="#{calendar.day.empty}">На этот день бронирований нет.</td>
+                <td colspan="5" class="empty" th:text="#{calendar.day.empty}">На этот день бронирований нет.</td>
             </tr>
             </tbody>
         </table>
     </section>
     <div th:replace="~{fragments/booking-dialog-shell :: bookingDialogShell}"></div>
+    <div th:replace="~{fragments/reason-dialog :: reasonDialog}"></div>
 </main>
 </body>
 </html>

@@ -22,19 +22,23 @@ import oro.tirotiro.equipmentwarehouse.booking.BookingFilter;
 import oro.tirotiro.equipmentwarehouse.booking.BookingService;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.Booking;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
+import oro.tirotiro.equipmentwarehouse.permission.PermissionService;
 
 @Service
 public class CalendarService {
 
     private final BookingService bookingService;
+    private final PermissionService permissionService;
     private final Clock clock;
     private final ZoneId zoneId;
 
     public CalendarService(
             BookingService bookingService,
+            PermissionService permissionService,
             Clock clock,
             AppProperties appProperties) {
         this.bookingService = bookingService;
+        this.permissionService = permissionService;
         this.clock = clock;
         this.zoneId = appProperties.timeZone();
     }
@@ -66,7 +70,7 @@ public class CalendarService {
     public DayCalendar dayCalendar(LocalDate date, User actor, BookingFilter filter) {
         LocalDate selectedDate = date == null ? LocalDate.now(clock.withZone(zoneId)) : date;
         List<BookingSummary> bookings = bookingsOverlapping(selectedDate, selectedDate.plusDays(1), actor, filter).stream()
-                .map(this::toBookingSummary)
+                .map(booking -> toBookingSummary(booking, actor))
                 .toList();
         return new DayCalendar(selectedDate, YearMonth.from(selectedDate), bookings, filter);
     }
@@ -95,7 +99,7 @@ public class CalendarService {
         return counts;
     }
 
-    private BookingSummary toBookingSummary(Booking booking) {
+    private BookingSummary toBookingSummary(Booking booking, User actor) {
         List<BookingLineSummary> lines = new ArrayList<>(booking.getLines().stream()
                 .map(line -> new BookingLineSummary(
                         line.getEquipmentItem().getId(),
@@ -108,13 +112,16 @@ public class CalendarService {
         lines.sort(Comparator
                 .comparing(BookingLineSummary::equipmentName)
                 .thenComparing(line -> line.inventoryNumber() == null ? "" : line.inventoryNumber()));
+        boolean deletable = permissionService.isAdmin(actor)
+                || booking.getUser().getId().equals(actor.getId());
         return new BookingSummary(
                 booking.getId(),
                 booking.getStartsAt(),
                 booking.getEndsAt(),
                 booking.getUser().getDisplayName(),
                 booking.getComment(),
-                lines);
+                lines,
+                deletable);
     }
 
     public record MonthCalendar(
@@ -142,7 +149,8 @@ public class CalendarService {
             java.time.Instant endsAt,
             String userDisplayName,
             String comment,
-            List<BookingLineSummary> lines) {
+            List<BookingLineSummary> lines,
+            boolean deletable) {
     }
 
     public record BookingLineSummary(

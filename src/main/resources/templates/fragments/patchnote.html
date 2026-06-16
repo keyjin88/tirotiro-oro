@@ -2,20 +2,43 @@
 <html lang="ru" xmlns:th="https://www.thymeleaf.org">
 <body>
 <aside th:fragment="patchnote" class="patchnote" aria-label="Что нового">
-    <p class="patchnote-version muted" th:if="${appVersion}" th:text="|Версия ${appVersion}|">Версия 0.2.0</p>
+    <p class="patchnote-version muted" th:if="${appVersion}" th:text="|Версия ${appVersion}|">Версия 0.3.1</p>
     <h2 class="patchnote-title">Что нового</h2>
-    <p class="patchnote-lead muted">Календарь с быстрым бронированием и учёт владельцев оборудования.</p>
+    <p class="patchnote-lead muted">В поиске оборудования при бронировании показывается владелец, а не тип учёта.</p>
 
-    <section class="patchnote-group">
-        <h3>Календарь</h3>
+    <section class="patchnote-group patchnote-release">
+        <h3 class="patchnote-release-title">Версия 0.3.0</h3>
+        <p class="patchnote-lead muted">Управление каталогом и архивом, удаление бронирований из календаря и понятнее сообщения о доступности.</p>
+
+        <h4>Администрирование</h4>
+        <ul>
+            <li>Удаление категорий оборудования, если в них нет позиций.</li>
+            <li>Восстановление оборудования из архива.</li>
+            <li>Безвозвратное удаление архивной позиции с указанием причины, если она не участвует в бронированиях.</li>
+        </ul>
+
+        <h4>Календарь</h4>
+        <ul>
+            <li>Удаление бронирования прямо со страницы дня — для автора брони и администратора.</li>
+        </ul>
+
+        <h4>Бронирования</h4>
+        <ul>
+            <li>При нехватке количества показывается, сколько единиц доступно.</li>
+        </ul>
+    </section>
+
+    <section class="patchnote-group patchnote-release">
+        <h3 class="patchnote-release-title">Версия 0.2.0</h3>
+        <p class="patchnote-lead muted">Календарь с быстрым бронированием и учёт владельцев оборудования.</p>
+
+        <h4>Календарь</h4>
         <ul>
             <li>Кнопка «+» для создания бронирования прямо из календаря — в шапке месяца и на каждом дне.</li>
             <li>Модальное окно бронирования с выбором даты и оборудования без перехода на отдельную страницу.</li>
         </ul>
-    </section>
 
-    <section class="patchnote-group">
-        <h3>Оборудование</h3>
+        <h4>Оборудование</h4>
         <ul>
             <li>Назначение владельца при создании и редактировании оборудования.</li>
             <li>Отображение владельца в каталоге, списке бронирований и деталях дня календаря.</li>

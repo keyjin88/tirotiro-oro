@@ -28,6 +28,8 @@ public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UU
     @EntityGraph(attributePaths = {"category", "owner"})
     List<EquipmentItem> findByActiveTrueOrderByNameAsc();
 
+    long countByCategory_Id(UUID categoryId);
+
     @EntityGraph(attributePaths = {"category", "owner"})
     @Query("select item from EquipmentItem item order by item.name")
     List<EquipmentItem> findAllDetailed();
@@ -57,7 +59,7 @@ public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UU
               )
             order by item.name
             """)
-    @EntityGraph(attributePaths = "category")
+    @EntityGraph(attributePaths = {"category", "owner"})
     List<EquipmentItem> searchActiveForBooking(@Param("query") String query, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
