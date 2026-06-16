@@ -71,7 +71,7 @@ public class AdminController {
 
     @GetMapping("/equipment")
     public String equipment(Model model) {
-        addEquipmentAdminModel(model, new CategoryForm(), new EquipmentForm(), new UnitForm());
+        addEquipmentAdminModel(model, new CategoryForm(), newEquipmentForm(), new UnitForm());
         return "admin/equipment";
     }
 
@@ -82,7 +82,7 @@ public class AdminController {
             Model model,
             RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            addEquipmentAdminModel(model, form, new EquipmentForm(), new UnitForm());
+            addEquipmentAdminModel(model, form, newEquipmentForm(), new UnitForm());
             return "admin/equipment";
         }
         try {
@@ -121,7 +121,7 @@ public class AdminController {
             Model model,
             RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            addEquipmentAdminModel(model, new CategoryForm(), new EquipmentForm(), form);
+            addEquipmentAdminModel(model, new CategoryForm(), newEquipmentForm(), form);
             return "admin/equipment";
         }
         try {
@@ -222,6 +222,9 @@ public class AdminController {
     }
 
     private void addEquipmentAdminModel(Model model, CategoryForm categoryForm, EquipmentForm equipmentForm, UnitForm unitForm) {
+        if (equipmentForm.getOwnerUserId() == null) {
+            equipmentForm.setOwnerUserId(currentUserService.requireCurrentUser().getId());
+        }
         model.addAttribute("categoryForm", categoryForm);
         model.addAttribute("equipmentForm", equipmentForm);
         model.addAttribute("unitForm", unitForm);
@@ -229,5 +232,12 @@ public class AdminController {
         model.addAttribute("items", itemRepository.findAllDetailed());
         model.addAttribute("trackingModes", TrackingMode.values());
         model.addAttribute("unitStatuses", EquipmentUnitStatus.values());
+        model.addAttribute("ownerCandidates", userRepository.findAllByEnabledTrueOrderByDisplayNameAsc());
+    }
+
+    private EquipmentForm newEquipmentForm() {
+        EquipmentForm form = new EquipmentForm();
+        form.setOwnerUserId(currentUserService.requireCurrentUser().getId());
+        return form;
     }
 }

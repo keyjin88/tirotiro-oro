@@ -100,6 +100,7 @@ public class UserAdministrationService {
         bookingRepository.clearCancelledByReferences(targetUserId);
         auditLogRepository.clearActorUserReferences(targetUserId);
         equipmentItemRepository.clearDeletedByReferences(targetUserId);
+        equipmentItemRepository.reassignOwnerReferences(targetUserId, actor);
         equipmentUnitRepository.clearDeletedByReferences(targetUserId);
 
         target.getRoles().clear();

@@ -85,6 +85,8 @@ pom.xml.versionsBackup
 pom.xml.next
 
 # Backup / temp
+temp/
 *.bak
 *.tmp
 *.orig
+

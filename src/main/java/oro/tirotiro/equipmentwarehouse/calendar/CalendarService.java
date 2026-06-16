@@ -98,8 +98,10 @@ public class CalendarService {
     private BookingSummary toBookingSummary(Booking booking) {
         List<BookingLineSummary> lines = new ArrayList<>(booking.getLines().stream()
                 .map(line -> new BookingLineSummary(
+                        line.getEquipmentItem().getId(),
                         line.getEquipmentItem().getCategory().getName(),
                         line.getEquipmentItem().getName(),
+                        line.getEquipmentItem().getOwner().getDisplayName(),
                         line.getEquipmentUnit() == null ? null : line.getEquipmentUnit().getInventoryNumber(),
                         line.getQuantity()))
                 .toList());
@@ -144,8 +146,10 @@ public class CalendarService {
     }
 
     public record BookingLineSummary(
+            UUID equipmentItemId,
             String categoryName,
             String equipmentName,
+            String ownerDisplayName,
             String inventoryNumber,
             int quantity) {
     }

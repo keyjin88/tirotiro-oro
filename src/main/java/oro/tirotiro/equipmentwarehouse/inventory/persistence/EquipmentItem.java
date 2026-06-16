@@ -30,6 +30,10 @@ public class EquipmentItem extends AuditedEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private EquipmentCategory category;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_user_id", nullable = false)
+    private User owner;
+
     @Column(nullable = false)
     private String name;
 
@@ -70,6 +74,10 @@ public class EquipmentItem extends AuditedEntity {
         this.totalQuantity = totalQuantity;
     }
 
+    public void assignOwner(User owner) {
+        this.owner = owner;
+    }
+
     public void updateDetails(
             EquipmentCategory category,
             String name,
@@ -103,6 +111,10 @@ public class EquipmentItem extends AuditedEntity {
 
     public EquipmentCategory getCategory() {
         return category;
+    }
+
+    public User getOwner() {
+        return owner;
     }
 
     public String getName() {

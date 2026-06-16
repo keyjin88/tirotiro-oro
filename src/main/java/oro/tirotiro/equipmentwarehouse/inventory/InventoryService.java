@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import oro.tirotiro.equipmentwarehouse.audit.AuditService;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
@@ -29,6 +30,7 @@ public class InventoryService {
     private final EquipmentCategoryRepository categoryRepository;
     private final EquipmentItemRepository itemRepository;
     private final EquipmentUnitRepository unitRepository;
+    private final UserRepository userRepository;
     private final PermissionService permissionService;
     private final AuditService auditService;
     private final Clock clock;
@@ -37,12 +39,14 @@ public class InventoryService {
             EquipmentCategoryRepository categoryRepository,
             EquipmentItemRepository itemRepository,
             EquipmentUnitRepository unitRepository,
+            UserRepository userRepository,
             PermissionService permissionService,
             AuditService auditService,
             Clock clock) {
         this.categoryRepository = categoryRepository;
         this.itemRepository = itemRepository;
         this.unitRepository = unitRepository;
+        this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.auditService = auditService;
         this.clock = clock;
@@ -94,17 +98,20 @@ public class InventoryService {
         EquipmentCategory category = categoryRepository.findById(command.categoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + command.categoryId()));
         int totalQuantity = validateQuantity(command.trackingMode(), command.totalQuantity());
+        User owner = resolveOwner(command.ownerUserId(), actor);
         EquipmentItem item = new EquipmentItem(
                 category,
                 requireText(command.name(), "Название оборудования"),
                 command.trackingMode(),
                 totalQuantity);
+        item.assignOwner(owner);
         item.updateDetails(category, command.name(), command.manufacturer(), command.model(), command.description());
         EquipmentItem saved = itemRepository.save(item);
         auditService.record(actor, "EQUIPMENT_ITEM_CREATED", "EQUIPMENT_ITEM", saved.getId(), Map.of(
                 "name", saved.getName(),
                 "trackingMode", saved.getTrackingMode().name(),
-                "totalQuantity", saved.getTotalQuantity()));
+                "totalQuantity", saved.getTotalQuantity(),
+                "ownerUserId", saved.getOwner().getId()));
         return saved;
     }
 
@@ -192,6 +199,16 @@ public class InventoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Единица оборудования не найдена: " + unitId));
     }
 
+    private User resolveOwner(UUID ownerUserId, User actor) {
+        UUID resolvedOwnerUserId = ownerUserId != null ? ownerUserId : actor.getId();
+        User owner = userRepository.findById(resolvedOwnerUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден: " + resolvedOwnerUserId));
+        if (!owner.isEnabled()) {
+            throw new IllegalArgumentException("Владелец должен быть активным пользователем");
+        }
+        return owner;
+    }
+
     private String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " обязательно для заполнения");
@@ -219,7 +236,8 @@ public class InventoryService {
             String model,
             String description,
             TrackingMode trackingMode,
-            int totalQuantity) {
+            int totalQuantity,
+            UUID ownerUserId) {
     }
 
     public record UpdateItemCommand(

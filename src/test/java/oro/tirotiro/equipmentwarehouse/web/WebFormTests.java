@@ -39,6 +39,8 @@ class WebFormTests {
         form.setDescription("Key light");
         form.setTrackingMode(TrackingMode.UNIT);
         form.setTotalQuantity(0);
+        UUID ownerUserId = UUID.randomUUID();
+        form.setOwnerUserId(ownerUserId);
 
         assertThat(form.getCategoryId()).isEqualTo(categoryId);
         assertThat(form.getName()).isEqualTo("Light");
@@ -49,6 +51,7 @@ class WebFormTests {
         assertThat(form.getTotalQuantity()).isZero();
         assertThat(form.toCommand().categoryId()).isEqualTo(categoryId);
         assertThat(form.toCommand().trackingMode()).isEqualTo(TrackingMode.UNIT);
+        assertThat(form.toCommand().ownerUserId()).isEqualTo(ownerUserId);
     }
 
     @Test

@@ -29,6 +29,9 @@ public class EquipmentForm {
     @Min(0)
     private int totalQuantity = 1;
 
+    @NotNull
+    private UUID ownerUserId;
+
     public InventoryService.CreateItemCommand toCommand() {
         return new InventoryService.CreateItemCommand(
                 categoryId,
@@ -37,7 +40,8 @@ public class EquipmentForm {
                 model,
                 description,
                 trackingMode,
-                totalQuantity);
+                totalQuantity,
+                ownerUserId);
     }
 
     public UUID getCategoryId() {
@@ -94,5 +98,13 @@ public class EquipmentForm {
 
     public void setTotalQuantity(int totalQuantity) {
         this.totalQuantity = totalQuantity;
+    }
+
+    public UUID getOwnerUserId() {
+        return ownerUserId;
+    }
+
+    public void setOwnerUserId(UUID ownerUserId) {
+        this.ownerUserId = ownerUserId;
     }
 }

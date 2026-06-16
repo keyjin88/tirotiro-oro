@@ -10,6 +10,7 @@ spring:
     cache: false
 
 app:
+  version: 0.2.0-test
   time-zone: Europe/Moscow
   security:
     remember-me-enabled: false

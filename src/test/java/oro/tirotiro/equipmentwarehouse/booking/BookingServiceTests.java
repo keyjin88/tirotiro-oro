@@ -272,6 +272,7 @@ class BookingServiceTests {
 
     private AppProperties appProperties() {
         return new AppProperties(
+                "0.2.0-test",
                 ZoneId.of("UTC"),
                 new AppProperties.Security(false),
                 new AppProperties.BootstrapAdmin(null, null, null));

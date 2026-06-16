@@ -8,6 +8,7 @@
         <p class="muted" th:text="${item.description ?: #messages.msg('equipment.details.noDescription')}">Описание пока не добавлено.</p>
         <dl class="details">
             <dt th:text="#{equipment.details.category}">Категория</dt><dd th:text="${item.category.name}">Категория</dd>
+            <dt th:text="#{equipment.details.owner}">Владелец</dt><dd th:text="${item.owner.displayName}">Владелец</dd>
             <dt th:text="#{equipment.details.manufacturer}">Производитель</dt><dd th:text="${item.manufacturer ?: '-'}">-</dd>
             <dt th:text="#{equipment.details.model}">Модель</dt><dd th:text="${item.model ?: '-'}">-</dd>
             <dt th:text="#{equipment.details.tracking}">Учет</dt><dd th:text="${#messages.msg('enum.TrackingMode.' + item.trackingMode.name())}">Количественный учет</dd>

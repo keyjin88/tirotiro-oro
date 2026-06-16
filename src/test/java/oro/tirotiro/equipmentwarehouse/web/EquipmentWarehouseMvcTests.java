@@ -12,6 +12,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,6 +51,8 @@ import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
 import oro.tirotiro.equipmentwarehouse.booking.BookingFilter;
 import oro.tirotiro.equipmentwarehouse.booking.BookingService;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.Booking;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingLine;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingStatus;
 import oro.tirotiro.equipmentwarehouse.calendar.CalendarService;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
@@ -134,7 +137,8 @@ class EquipmentWarehouseMvcTests {
     void loginPageIsPublic() throws Exception {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Вход")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Вход")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Версия 0.2.0-test")));
     }
 
     @Test
@@ -342,13 +346,46 @@ class EquipmentWarehouseMvcTests {
 
     @Test
     void equipmentCreationPageAllowsEquipmentCreateAuthority() throws Exception {
+        User actor = actor();
         EquipmentCategory category = category("Cameras");
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
         when(categoryRepository.findAll()).thenReturn(List.of(category));
+        when(userRepository.findAllByEnabledTrueOrderByDisplayNameAsc()).thenReturn(List.of(actor));
 
         mockMvc.perform(get("/equipment/new").with(user("creator").authorities(() -> "EQUIPMENT_CREATE")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Добавить оборудование")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Cameras")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Cameras")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Владелец")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Actor")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("selected=\"selected\"")));
+    }
+
+    @Test
+    void equipmentCreatePostsOwnerUserId() throws Exception {
+        UUID categoryId = UUID.randomUUID();
+        User actor = actor();
+        User otherOwner = new User("owner@example.com", "hash", "Owner User");
+        ReflectionTestUtils.setField(otherOwner, "id", UUID.randomUUID());
+        EquipmentItem created = item("Tripod", TrackingMode.QUANTITY, 2);
+        created.assignOwner(otherOwner);
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(inventoryService.createItem(any(InventoryService.CreateItemCommand.class), eq(actor))).thenReturn(created);
+
+        mockMvc.perform(post("/equipment")
+                .with(user("creator").authorities(() -> "EQUIPMENT_CREATE"))
+                .with(csrf())
+                .param("categoryId", categoryId.toString())
+                .param("name", "Tripod")
+                .param("ownerUserId", otherOwner.getId().toString())
+                .param("trackingMode", TrackingMode.QUANTITY.name())
+                .param("totalQuantity", "2"))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<InventoryService.CreateItemCommand> commandCaptor =
+                ArgumentCaptor.forClass(InventoryService.CreateItemCommand.class);
+        verify(inventoryService).createItem(commandCaptor.capture(), eq(actor));
+        assertThat(commandCaptor.getValue().ownerUserId()).isEqualTo(otherOwner.getId());
     }
 
     @Test
@@ -368,6 +405,7 @@ class EquipmentWarehouseMvcTests {
     void catalogPageRendersEquipmentTable() throws Exception {
         User actor = actor();
         EquipmentItem item = item("Camera", TrackingMode.QUANTITY, 3);
+        item.assignOwner(actor);
         when(currentUserService.requireCurrentUser()).thenReturn(actor);
         when(inventoryService.findCatalog(eq(EquipmentCatalogFilter.EMPTY), eq(actor))).thenReturn(List.of(item));
         when(categoryRepository.findAll()).thenReturn(List.of(category("Production")));
@@ -375,7 +413,9 @@ class EquipmentWarehouseMvcTests {
         mockMvc.perform(get("/equipment").with(user("viewer").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Каталог оборудования")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Camera")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Camera")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Владелец")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Actor")));
     }
 
     @Test
@@ -413,7 +453,7 @@ class EquipmentWarehouseMvcTests {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-target=\"#booking-line-0-search-results\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-trigger=\"input changed delay:300ms, search\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Введите минимум 2 символа для поиска.")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("T23:59")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/booking-form.js")));
 
         verify(inventoryService, never()).findActiveCatalog();
     }
@@ -585,6 +625,7 @@ class EquipmentWarehouseMvcTests {
                 .with(csrf())
                 .param("categoryId", categoryId.toString())
                 .param("name", "Monitor")
+                .param("ownerUserId", actor.getId().toString())
                 .param("trackingMode", TrackingMode.QUANTITY.name())
                 .param("totalQuantity", "4"))
                 .andExpect(status().is3xxRedirection())
@@ -613,23 +654,170 @@ class EquipmentWarehouseMvcTests {
                 .param("month", "2026-06"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Бронирований: 2")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/calendar/day/2026-06-15")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/calendar/day/2026-06-15")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-booking-dialog")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-date=\"2026-06-15\"")));
+    }
+
+    @Test
+    void calendarDayRendersBookingCreateButton() throws Exception {
+        User actor = actor();
+        BookingFilter filter = BookingFilter.EMPTY;
+        UUID itemId = UUID.randomUUID();
+        CalendarService.BookingLineSummary line = new CalendarService.BookingLineSummary(
+                itemId,
+                "Камеры",
+                "Sony FX6",
+                "Owner User",
+                null,
+                1);
+        CalendarService.BookingSummary booking = new CalendarService.BookingSummary(
+                UUID.randomUUID(),
+                Instant.parse("2026-06-15T10:00:00Z"),
+                Instant.parse("2026-06-15T12:00:00Z"),
+                "Actor",
+                "Интервью",
+                List.of(line));
+        CalendarService.DayCalendar day = new CalendarService.DayCalendar(
+                LocalDate.parse("2026-06-15"),
+                YearMonth.parse("2026-06"),
+                List.of(booking),
+                filter);
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(calendarService.dayCalendar(LocalDate.parse("2026-06-15"), actor, filter)).thenReturn(day);
+        when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of());
+
+        mockMvc.perform(get("/calendar/day/2026-06-15").with(user("viewer").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-booking-dialog")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-date=\"2026-06-15\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"booking-dialog\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/equipment/" + itemId)))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Sony FX6")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Владелец: Owner User")));
+    }
+
+    @Test
+    void bookingModalPrefillsSelectedDateAndReturnUrl() throws Exception {
+        mockMvc.perform(get("/bookings/modal")
+                .with(user("viewer").roles("USER"))
+                .param("date", "2026-06-20")
+                .param("returnUrl", "/calendar?month=2026-06"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Новое бронирование")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"2026-06-20T09:00:00\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"2026-06-20T23:59:00\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"/calendar?month=2026-06\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("hx-post=\"/bookings\"")));
+    }
+
+    @Test
+    void bookingModalPrefillsTodayWithRoundedStartTime() throws Exception {
+        mockMvc.perform(get("/bookings/modal")
+                .with(user("viewer").roles("USER"))
+                .param("date", "2026-06-15")
+                .param("returnUrl", "/calendar/day/2026-06-15"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"2026-06-15T07:00:00\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"2026-06-15T23:59:00\"")));
+    }
+
+    @Test
+    void bookingCreateRedirectsBackToCalendarWhenReturnUrlProvided() throws Exception {
+        UUID quantityItemId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/bookings")
+                .with(user("viewer").roles("USER"))
+                .with(csrf())
+                .param("returnUrl", "/calendar?month=2026-06")
+                .param("startsAt", "2026-06-15T09:00")
+                .param("endsAt", "2026-06-15T10:00")
+                .param("lines[0].equipmentItemId", quantityItemId.toString())
+                .param("lines[0].quantity", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/calendar?month=2026-06"));
+
+        verify(bookingService).createBooking(any(BookingService.CreateBookingCommand.class), eq(actor));
+    }
+
+    @Test
+    void bookingCreateFromModalUsesHtmxRedirectHeader() throws Exception {
+        UUID quantityItemId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/bookings")
+                .with(user("viewer").roles("USER"))
+                .with(csrf())
+                .header("HX-Request", "true")
+                .param("returnUrl", "/calendar/day/2026-06-15")
+                .param("startsAt", "2026-06-15T09:00")
+                .param("endsAt", "2026-06-15T10:00")
+                .param("lines[0].equipmentItemId", quantityItemId.toString())
+                .param("lines[0].quantity", "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("HX-Redirect", "/calendar/day/2026-06-15"));
+
+        verify(bookingService).createBooking(any(BookingService.CreateBookingCommand.class), eq(actor));
+    }
+
+    @Test
+    void bookingCreateRejectsUnsafeReturnUrl() throws Exception {
+        UUID quantityItemId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/bookings")
+                .with(user("viewer").roles("USER"))
+                .with(csrf())
+                .param("returnUrl", "https://evil.example")
+                .param("startsAt", "2026-06-15T09:00")
+                .param("endsAt", "2026-06-15T10:00")
+                .param("lines[0].equipmentItemId", quantityItemId.toString())
+                .param("lines[0].quantity", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/bookings"));
+    }
+
+    @Test
+    void bookingCreateValidationErrorsRerenderModalWhenReturnUrlProvided() throws Exception {
+        mockMvc.perform(post("/bookings")
+                .with(user("viewer").roles("USER"))
+                .with(csrf())
+                .param("returnUrl", "/calendar")
+                .param("startsAt", "2026-06-15T09:00")
+                .param("endsAt", "2026-06-15T10:00"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Новое бронирование")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"/calendar\"")));
+
+        verify(bookingService, never()).createBooking(any(), any());
     }
 
     @Test
     void bookingsListRendersFilterPanelAndAppliesStatusFilter() throws Exception {
         User actor = actor();
+        EquipmentItem item = item("Sony FX6", TrackingMode.UNIT, 0);
+        item.assignOwner(actor);
+        Booking booking = new Booking(actor, Instant.parse("2026-06-15T10:00:00Z"), Instant.parse("2026-06-15T12:00:00Z"), BookingStatus.BOOKED);
+        ReflectionTestUtils.setField(booking, "id", UUID.randomUUID());
+        booking.replaceLines(java.util.Set.of(new BookingLine(booking, item, null, 1)));
         when(currentUserService.requireCurrentUser()).thenReturn(actor);
         when(bookingService.findBookings(eq(actor), eq(BookingFilter.of(BookingStatus.BOOKED, null, null, null, null))))
-                .thenReturn(List.of());
-        when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of());
+                .thenReturn(List.of(booking));
+        when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(item));
 
         mockMvc.perform(get("/bookings")
                 .with(user("viewer").roles("USER"))
                 .param("status", "BOOKED"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Все статусы")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Применить")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Применить")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/equipment/" + item.getId())))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Sony FX6")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Владелец: Actor")));
 
         verify(bookingService).findBookings(eq(actor), eq(BookingFilter.of(BookingStatus.BOOKED, null, null, null, null)));
     }
@@ -673,6 +861,7 @@ class EquipmentWarehouseMvcTests {
         @Bean
         AppProperties appProperties() {
             return new AppProperties(
+                    "0.2.0-test",
                     ZoneId.of("UTC"),
                     new AppProperties.Security(false),
                     new AppProperties.BootstrapAdmin(null, null, null));

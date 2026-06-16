@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
 import oro.tirotiro.equipmentwarehouse.inventory.CatalogActiveFilter;
 import oro.tirotiro.equipmentwarehouse.inventory.EquipmentCatalogFilter;
@@ -38,6 +40,7 @@ public class EquipmentController {
     private final EquipmentCategoryRepository categoryRepository;
     private final EquipmentItemRepository itemRepository;
     private final EquipmentUnitRepository unitRepository;
+    private final UserRepository userRepository;
     private final EquipmentCatalogFilterSupport equipmentCatalogFilterSupport;
 
     public EquipmentController(
@@ -47,6 +50,7 @@ public class EquipmentController {
             EquipmentCategoryRepository categoryRepository,
             EquipmentItemRepository itemRepository,
             EquipmentUnitRepository unitRepository,
+            UserRepository userRepository,
             EquipmentCatalogFilterSupport equipmentCatalogFilterSupport) {
         this.inventoryService = inventoryService;
         this.availabilityService = availabilityService;
@@ -54,6 +58,7 @@ public class EquipmentController {
         this.categoryRepository = categoryRepository;
         this.itemRepository = itemRepository;
         this.unitRepository = unitRepository;
+        this.userRepository = userRepository;
         this.equipmentCatalogFilterSupport = equipmentCatalogFilterSupport;
     }
 
@@ -83,7 +88,7 @@ public class EquipmentController {
 
     @GetMapping("/new")
     public String newEquipment(Model model) {
-        addCreateModel(model, new EquipmentForm());
+        addCreateModel(model, newEquipmentForm());
         return "equipment/new";
     }
 
@@ -152,9 +157,20 @@ public class EquipmentController {
     }
 
     private void addCreateModel(Model model, EquipmentForm form) {
+        User actor = currentUserService.requireCurrentUser();
+        if (form.getOwnerUserId() == null) {
+            form.setOwnerUserId(actor.getId());
+        }
         model.addAttribute("form", form);
         model.addAttribute("categories", categoryRepository.findAll());
         model.addAttribute("trackingModes", TrackingMode.values());
+        model.addAttribute("ownerCandidates", userRepository.findAllByEnabledTrueOrderByDisplayNameAsc());
+    }
+
+    private EquipmentForm newEquipmentForm() {
+        EquipmentForm form = new EquipmentForm();
+        form.setOwnerUserId(currentUserService.requireCurrentUser().getId());
+        return form;
     }
 
     private void addDetailsModel(UUID itemId, Model model) {

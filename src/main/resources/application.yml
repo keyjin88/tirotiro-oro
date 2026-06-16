@@ -27,6 +27,7 @@ server:
   port: ${SERVER_PORT:8080}
 
 app:
+  version: @project.version@
   time-zone: ${APP_TIME_ZONE:Europe/Moscow}
   security:
     remember-me-enabled: ${APP_SECURITY_REMEMBER_ME_ENABLED:false}

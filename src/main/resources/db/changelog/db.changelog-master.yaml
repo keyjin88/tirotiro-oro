@@ -13,3 +13,5 @@ databaseChangeLog:
       file: db/changelog/changes/006-local-demo-data.yaml
   - include:
       file: db/changelog/changes/007-add-equipment-search-indexes.yaml
+  - include:
+      file: db/changelog/changes/008-add-equipment-owner.yaml

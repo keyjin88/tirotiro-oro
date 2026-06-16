@@ -27,6 +27,7 @@ class LiquibaseChangelogTests {
                         "004-create-bookings",
                         "005-create-audit-log",
                         "006-local-demo-data",
-                        "007-add-equipment-search-indexes");
+                        "007-add-equipment-search-indexes",
+                        "008-add-equipment-owner");
     }
 }

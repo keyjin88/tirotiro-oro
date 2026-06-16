@@ -24,9 +24,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.support.RequestContextUtils;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityException;
@@ -99,12 +104,18 @@ public class BookingController {
 
     @GetMapping("/new")
     public String newBooking(Model model) {
-        BookingForm form = new BookingForm();
-        LocalDateTime start = LocalDateTime.ofInstant(clock.instant(), appProperties.timeZone()).plusHours(1).withMinute(0).withSecond(0).withNano(0);
-        form.setStartsAt(start);
-        form.setEndsAt(start.plusHours(2));
-        addFormModel(model, form);
+        addFormModel(model, defaultFormForDate(null));
         return "bookings/new";
+    }
+
+    @GetMapping("/modal")
+    public String bookingModal(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String returnUrl,
+            Model model) {
+        addFormModel(model, defaultFormForDate(date));
+        model.addAttribute("returnUrl", sanitizeReturnUrl(returnUrl));
+        return "bookings/partials/modal :: bookingModal";
     }
 
     @GetMapping("/line")
@@ -120,7 +131,7 @@ public class BookingController {
             Model model) {
         form.removeLine(removeIndex);
         addFormModel(model, form);
-        return "bookings/new :: bookingLines";
+        return "bookings/partials/form-fields :: bookingLines";
     }
 
     @GetMapping("/equipment-search")
@@ -158,19 +169,41 @@ public class BookingController {
     public String create(
             @Valid @ModelAttribute("form") BookingForm form,
             BindingResult bindingResult,
+            @RequestParam(required = false) String returnUrl,
+            @RequestHeader(value = "HX-Request", required = false) String htmxRequest,
             Model model,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        String redirectTarget = sanitizeReturnUrl(returnUrl);
         if (bindingResult.hasErrors()) {
             addFormModel(model, form);
+            if (redirectTarget != null) {
+                model.addAttribute("returnUrl", redirectTarget);
+                return "bookings/partials/modal :: bookingModal";
+            }
             return "bookings/new";
         }
         try {
             bookingService.createBooking(form.toCommand(appProperties.timeZone()), currentUserService.requireCurrentUser());
+            String target = redirectTarget == null ? "/bookings" : redirectTarget;
+            if ("true".equals(htmxRequest)) {
+                var flashMap = RequestContextUtils.getOutputFlashMap(request);
+                if (flashMap != null) {
+                    flashMap.put("message", "Бронирование создано");
+                }
+                response.setHeader("HX-Redirect", target);
+                return "fragments/empty :: empty";
+            }
             redirectAttributes.addFlashAttribute("message", "Бронирование создано");
-            return "redirect:/bookings";
+            return "redirect:" + target;
         } catch (AvailabilityException | IllegalArgumentException ex) {
             model.addAttribute("error", ex.getMessage());
             addFormModel(model, form);
+            if (redirectTarget != null) {
+                model.addAttribute("returnUrl", redirectTarget);
+                return "bookings/partials/modal :: bookingModal";
+            }
             return "bookings/new";
         }
     }
@@ -239,5 +272,33 @@ public class BookingController {
 
     private List<EquipmentUnit> unitsFor(EquipmentItem item) {
         return unitRepository.findByEquipmentItem_IdAndArchivedFalseOrderByInventoryNumberAsc(item.getId());
+    }
+
+    private BookingForm defaultFormForDate(LocalDate date) {
+        BookingForm form = new BookingForm();
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), appProperties.timeZone());
+        LocalDateTime start;
+        if (date != null) {
+            start = date.equals(now.toLocalDate())
+                    ? now.plusHours(1).withMinute(0).withSecond(0).withNano(0)
+                    : date.atTime(9, 0);
+            form.setStartsAt(start);
+            form.setEndsAt(date.atTime(23, 59));
+        } else {
+            start = now.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+            form.setStartsAt(start);
+            form.setEndsAt(start.plusHours(2));
+        }
+        return form;
+    }
+
+    private String sanitizeReturnUrl(String returnUrl) {
+        if (returnUrl == null || returnUrl.isBlank()) {
+            return null;
+        }
+        if (!returnUrl.startsWith("/") || returnUrl.startsWith("//")) {
+            return null;
+        }
+        return returnUrl;
     }
 }

@@ -22,13 +22,31 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     @Query("update Booking booking set booking.cancelledBy = null where booking.cancelledBy.id = :userId")
     void clearCancelledByReferences(@Param("userId") UUID userId);
 
-    @EntityGraph(attributePaths = {"user", "lines", "lines.equipmentItem", "lines.equipmentUnit"})
+    @EntityGraph(attributePaths = {
+            "user",
+            "lines",
+            "lines.equipmentItem",
+            "lines.equipmentItem.category",
+            "lines.equipmentItem.owner",
+            "lines.equipmentUnit"})
     List<Booking> findByUser_IdOrderByStartsAtDesc(UUID userId);
 
-    @EntityGraph(attributePaths = {"user", "lines", "lines.equipmentItem", "lines.equipmentUnit"})
+    @EntityGraph(attributePaths = {
+            "user",
+            "lines",
+            "lines.equipmentItem",
+            "lines.equipmentItem.category",
+            "lines.equipmentItem.owner",
+            "lines.equipmentUnit"})
     List<Booking> findAllByOrderByStartsAtDesc();
 
-    @EntityGraph(attributePaths = {"user", "lines", "lines.equipmentItem", "lines.equipmentUnit"})
+    @EntityGraph(attributePaths = {
+            "user",
+            "lines",
+            "lines.equipmentItem",
+            "lines.equipmentItem.category",
+            "lines.equipmentItem.owner",
+            "lines.equipmentUnit"})
     List<Booking> findByStatusAndStartsAtLessThanAndEndsAtGreaterThanOrderByStartsAtAsc(
             BookingStatus status,
             Instant endsAt,
@@ -49,6 +67,12 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("endsAt") Instant endsAt,
             @Param("statuses") Collection<BookingStatus> statuses);
 
-    @EntityGraph(attributePaths = {"user", "lines", "lines.equipmentItem", "lines.equipmentUnit"})
+    @EntityGraph(attributePaths = {
+            "user",
+            "lines",
+            "lines.equipmentItem",
+            "lines.equipmentItem.category",
+            "lines.equipmentItem.owner",
+            "lines.equipmentUnit"})
     List<Booking> findAll(Specification<Booking> spec, Sort sort);
 }
