@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: tirotiro-oro
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/equipment}
+    username: ${SPRING_DATASOURCE_USERNAME:equipment_app}
+    password: ${SPRING_DATASOURCE_PASSWORD:change-me}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+    enabled: ${SPRING_LIQUIBASE_ENABLED:true}
+    contexts: ${SPRING_LIQUIBASE_CONTEXTS:}
+  thymeleaf:
+    cache: true
+  messages:
+    basename: messages
+    encoding: UTF-8
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  time-zone: ${APP_TIME_ZONE:Europe/Moscow}
+  security:
+    remember-me-enabled: ${APP_SECURITY_REMEMBER_ME_ENABLED:false}
+  bootstrap-admin:
+    email: ${APP_BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${APP_BOOTSTRAP_ADMIN_PASSWORD:}
+    name: ${APP_BOOTSTRAP_ADMIN_NAME:}

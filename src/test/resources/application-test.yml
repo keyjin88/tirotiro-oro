@@ -1,0 +1,15 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+  liquibase:
+    enabled: false
+  thymeleaf:
+    cache: false
+
+app:
+  time-zone: Europe/Moscow
+  security:
+    remember-me-enabled: false

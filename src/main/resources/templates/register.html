@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{registration.title})}"></head>
+<body>
+<main class="auth-card">
+    <h1 th:text="#{registration.heading}">Регистрация</h1>
+    <p class="muted" th:text="#{registration.subtitle}">Создайте учетную запись для просмотра каталога и бронирований.</p>
+    <form th:action="@{/register}" th:object="${registrationForm}" method="post" class="stack">
+        <label>
+            <span th:text="#{registration.email}">Почта</span>
+            <input th:field="*{email}" type="email" autocomplete="email" required autofocus>
+            <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Ошибка</span>
+        </label>
+        <label>
+            <span th:text="#{registration.displayName}">Имя</span>
+            <input th:field="*{displayName}" type="text" autocomplete="name" required>
+            <span class="field-error" th:if="${#fields.hasErrors('displayName')}" th:errors="*{displayName}">Ошибка</span>
+        </label>
+        <label>
+            <span th:text="#{registration.password}">Пароль</span>
+            <input th:field="*{password}" type="password" autocomplete="new-password" required>
+            <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Ошибка</span>
+        </label>
+        <label>
+            <span th:text="#{registration.passwordConfirmation}">Повторите пароль</span>
+            <input th:field="*{passwordConfirmation}" type="password" autocomplete="new-password" required>
+            <span class="field-error" th:if="${#fields.hasErrors('passwordConfirmation')}" th:errors="*{passwordConfirmation}">Ошибка</span>
+        </label>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button type="submit" th:text="#{registration.submit}">Создать аккаунт</button>
+    </form>
+    <p class="muted auth-link">
+        <span th:text="#{registration.haveAccount}">Уже есть аккаунт?</span>
+        <a th:href="@{/login}" th:text="#{registration.signIn}">Войти</a>
+    </p>
+</main>
+</body>
+</html>

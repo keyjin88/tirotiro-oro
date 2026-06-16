@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<section th:fragment="equipmentDetails" class="grid two">
+    <article class="card">
+        <a th:href="@{/equipment}" th:text="#{equipment.details.back}">Назад к каталогу</a>
+        <h1 th:text="${item.name}">Оборудование</h1>
+        <p class="muted" th:text="${item.description ?: #messages.msg('equipment.details.noDescription')}">Описание пока не добавлено.</p>
+        <dl class="details">
+            <dt th:text="#{equipment.details.category}">Категория</dt><dd th:text="${item.category.name}">Категория</dd>
+            <dt th:text="#{equipment.details.manufacturer}">Производитель</dt><dd th:text="${item.manufacturer ?: '-'}">-</dd>
+            <dt th:text="#{equipment.details.model}">Модель</dt><dd th:text="${item.model ?: '-'}">-</dd>
+            <dt th:text="#{equipment.details.tracking}">Учет</dt><dd th:text="${#messages.msg('enum.TrackingMode.' + item.trackingMode.name())}">Количественный учет</dd>
+            <dt th:text="#{equipment.details.totalQuantity}">Общее количество</dt><dd th:text="${item.totalQuantity}">1</dd>
+        </dl>
+        <a class="button" th:href="@{/bookings/new(equipmentItemId=${item.id})}" th:text="#{equipment.details.book}">Забронировать</a>
+    </article>
+    <article class="card">
+        <h2 th:text="#{equipment.details.units}">Единицы</h2>
+        <table>
+            <thead><tr><th th:text="#{equipment.details.inventoryNumber}">Инвентарный номер</th><th th:text="#{equipment.details.status}">Статус</th><th th:text="#{equipment.details.condition}">Состояние</th></tr></thead>
+            <tbody>
+            <tr th:each="unit : ${units}">
+                <td th:text="${unit.inventoryNumber}">INV-1</td>
+                <td><span class="pill" th:text="${#messages.msg('enum.EquipmentUnitStatus.' + unit.status.name())}">Доступна</span></td>
+                <td th:text="${unit.condition}">Готово</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(units)}"><td colspan="3" class="empty" th:text="#{equipment.details.noUnits}">Единицы не зарегистрированы.</td></tr>
+            </tbody>
+        </table>
+    </article>
+</section>
+</body>
+</html>

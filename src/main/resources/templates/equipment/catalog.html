@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{equipment.catalog.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <div class="page-title">
+        <div>
+            <h1 th:text="#{equipment.catalog.heading}">Каталог оборудования</h1>
+            <p class="muted" th:text="#{equipment.catalog.subtitle}">Просматривайте активное оборудование склада и открывайте карточку перед бронированием.</p>
+        </div>
+        <a class="button" th:if="${canCreateEquipment}" th:href="@{/equipment/new}" th:text="#{equipment.catalog.add}">Добавить оборудование</a>
+    </div>
+    <button class="secondary" hx-get="/equipment/table" hx-target="#equipment-table" hx-swap="outerHTML" th:text="#{equipment.catalog.refresh}">Обновить таблицу</button>
+    <section th:replace="~{equipment/partials/table :: equipmentTable}"></section>
+</main>
+</body>
+</html>

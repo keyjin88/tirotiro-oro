@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{app.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <h1 th:text="#{home.heading}">Склад оборудования</h1>
+    <p class="muted" th:text="#{home.subtitle}">Откройте каталог, чтобы забронировать оборудование.</p>
+    <a class="button" th:href="@{/equipment}" th:text="#{home.catalog}">Открыть каталог</a>
+</main>
+</body>
+</html>

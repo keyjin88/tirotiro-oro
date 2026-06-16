@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<div th:fragment="lineSelection(lineIndex, line, selectedItem, units)"
+     th:id="|booking-line-${lineIndex}-selection|"
+     th:object="${form}"
+     class="booking-line-selection stack">
+    <input type="hidden" th:name="|lines[${lineIndex}].equipmentItemId|" th:value="${line.equipmentItemId}">
+    <div th:if="${selectedItem == null}" class="notice muted" th:text="#{bookings.form.noEquipmentSelected}">
+        Оборудование не выбрано.
+    </div>
+    <div th:if="${selectedItem != null}" class="selected-equipment">
+        <div>
+            <strong th:text="${selectedItem.name}">Оборудование</strong>
+            <span class="pill" th:text="${#messages.msg('enum.TrackingMode.' + selectedItem.trackingMode.name())}">Учет</span>
+            <div class="muted" th:text="${selectedItem.category.name}">Категория</div>
+        </div>
+    </div>
+    <label th:if="${selectedItem != null && selectedItem.trackingMode.name() == 'QUANTITY'}">
+        <span th:text="#{bookings.form.quantity}">Количество</span>
+        <input type="number" min="1" th:name="|lines[${lineIndex}].quantity|" th:value="${line.quantity}" required>
+        <span class="field-error"
+              th:if="${#fields.hasErrors('lines[' + lineIndex + '].quantity')}"
+              th:errors="*{lines[__${lineIndex}__].quantity}">Количество должно быть не меньше 1.</span>
+    </label>
+    <div th:if="${selectedItem != null && selectedItem.trackingMode.name() == 'UNIT'}" class="stack compact">
+        <input type="hidden" th:name="|lines[${lineIndex}].quantity|" value="1">
+        <label>
+            <span th:text="#{bookings.form.specificUnit}">Конкретная единица</span>
+            <select th:name="|lines[${lineIndex}].equipmentUnitId|" required>
+                <option value="" th:text="#{bookings.form.selectUnit}">Выберите единицу</option>
+                <option th:each="unit : ${units}"
+                        th:value="${unit.id}"
+                        th:selected="${unit.id == line.equipmentUnitId}"
+                        th:text="${unit.inventoryNumber + ' - ' + #messages.msg('enum.EquipmentUnitStatus.' + unit.status.name())}">Единица</option>
+            </select>
+        </label>
+        <p class="muted" th:if="${#lists.isEmpty(units)}" th:text="#{bookings.form.noUnits}">
+            Для этого оборудования нет доступных единиц.
+        </p>
+    </div>
+    <span class="field-error"
+          th:if="${#fields.hasErrors('lines[' + lineIndex + '].equipmentItemId')}"
+          th:errors="*{lines[__${lineIndex}__].equipmentItemId}">Выберите оборудование.</span>
+</div>
+</body>
+</html>

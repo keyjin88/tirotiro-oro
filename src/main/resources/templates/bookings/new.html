@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{bookings.form.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page narrow">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <h1 th:text="#{bookings.form.heading}">Новое бронирование</h1>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+    <form th:action="@{/bookings}" th:object="${form}" method="post" class="card stack">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <label><span th:text="#{bookings.form.startsAt}">Начало</span> <input type="datetime-local" th:field="*{startsAt}" data-booking-starts-at required>
+            <span class="field-error" th:if="${#fields.hasErrors('startsAt')}" th:errors="*{startsAt}">Укажите начало бронирования.</span>
+        </label>
+        <label><span th:text="#{bookings.form.endsAt}">Окончание</span> <input type="datetime-local" th:field="*{endsAt}" data-booking-ends-at required>
+            <span class="field-error" th:if="${#fields.hasErrors('endsAt')}" th:errors="*{endsAt}">Укажите окончание бронирования.</span>
+        </label>
+        <section class="stack">
+            <div>
+                <h2 th:text="#{bookings.form.lines}">Позиции бронирования</h2>
+                <p class="muted" th:text="#{bookings.form.searchHelp}">Ищите оборудование по названию, производителю, модели или категории.</p>
+            </div>
+            <section id="booking-lines" class="stack" th:fragment="bookingLines" th:object="${form}">
+                <th:block th:each="line, lineStat : *{lines}">
+                    <section th:replace="~{bookings/partials/line :: bookingLine(${lineStat.index}, ${line}, ${line.equipmentItemId == null ? null : selectedItemsById.get(line.equipmentItemId)}, ${line.equipmentItemId == null ? null : unitsByItemId.get(line.equipmentItemId)})}"></section>
+                </th:block>
+            </section>
+            <button type="button"
+                    class="secondary"
+                    hx-get="/bookings/line"
+                    hx-target="#booking-lines"
+                    hx-swap="beforeend"
+                    hx-vals="js:{index: document.querySelectorAll('[data-booking-line]').length}"
+                    th:text="#{bookings.form.addLine}">Добавить позицию</button>
+        </section>
+        <label><span th:text="#{bookings.form.comment}">Комментарий</span> <textarea th:field="*{comment}"></textarea></label>
+        <button type="submit" th:text="#{bookings.form.submit}">Создать бронирование</button>
+    </form>
+</main>
+<script>
+    (() => {
+        const startsAt = document.querySelector('[data-booking-starts-at]');
+        const endsAt = document.querySelector('[data-booking-ends-at]');
+        if (!startsAt || !endsAt) {
+            return;
+        }
+
+        const datePart = (value) => value ? value.slice(0, 10) : '';
+        const endOfDayFor = (value) => {
+            const date = datePart(value);
+            return date ? `${date}T23:59` : '';
+        };
+        let previousStartDate = datePart(startsAt.value);
+
+        startsAt.addEventListener('change', () => {
+            const nextEnd = endOfDayFor(startsAt.value);
+            if (!nextEnd) {
+                previousStartDate = datePart(startsAt.value);
+                return;
+            }
+
+            const currentEndDate = datePart(endsAt.value);
+            if (!endsAt.value || currentEndDate === previousStartDate) {
+                endsAt.value = nextEnd;
+                endsAt.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            previousStartDate = datePart(startsAt.value);
+        });
+    })();
+</script>
+</body>
+</html>

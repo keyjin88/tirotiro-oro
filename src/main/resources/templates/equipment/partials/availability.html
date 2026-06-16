@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<body>
+<div id="availability-summary" th:fragment="availabilitySummary" class="notice">
+    <span th:if="${availability == null}" th:text="#{equipment.availability.unavailable}">Доступность не удалось рассчитать.</span>
+    <span th:if="${availability != null}" th:text="#{equipment.availability.summary(${availability.available}, ${availability.total})}">Доступно: 0 из 0</span>
+</div>
+</body>
+</html>

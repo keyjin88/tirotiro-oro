@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: equipment
+      POSTGRES_USER: equipment_app
+      POSTGRES_PASSWORD: change-me
+    ports:
+      - "5432:5432"
+    volumes:
+      - equipment_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U equipment_app -d equipment"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    image: tirotiro-oro:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/equipment
+      SPRING_DATASOURCE_USERNAME: equipment_app
+      SPRING_DATASOURCE_PASSWORD: change-me
+      SPRING_LIQUIBASE_CONTEXTS: local
+      APP_BOOTSTRAP_ADMIN_EMAIL: admin@example.local
+      APP_BOOTSTRAP_ADMIN_PASSWORD: change-me-admin
+      APP_BOOTSTRAP_ADMIN_NAME: Local Admin
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  equipment_postgres_data:

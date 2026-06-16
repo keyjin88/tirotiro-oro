@@ -1,0 +1,84 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-permissions
+      author: cursor
+      changes:
+        - createTable:
+            tableName: permissions
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: name
+                  type: varchar(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+        - createTable:
+            tableName: user_permissions
+            columns:
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: permission_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: granted_by
+                  type: uuid
+              - column:
+                  name: granted_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: user_permissions
+            columnNames: user_id, permission_id
+            constraintName: pk_user_permissions
+        - addForeignKeyConstraint:
+            baseTableName: user_permissions
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_user_permissions_user
+        - addForeignKeyConstraint:
+            baseTableName: user_permissions
+            baseColumnNames: permission_id
+            referencedTableName: permissions
+            referencedColumnNames: id
+            constraintName: fk_user_permissions_permission
+        - addForeignKeyConstraint:
+            baseTableName: user_permissions
+            baseColumnNames: granted_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_user_permissions_granted_by
+        - insert:
+            tableName: permissions
+            columns:
+              - column:
+                  name: code
+                  value: EQUIPMENT_CREATE
+              - column:
+                  name: name
+                  value: Create equipment
+              - column:
+                  name: description
+                  value: Allows adding new equipment items to the warehouse.

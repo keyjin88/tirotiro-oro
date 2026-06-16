@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{equipment.form.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page narrow">
+    <section th:replace="~{fragments/layout :: flash}"></section>
+    <h1 th:text="#{equipment.form.heading}">Добавить оборудование</h1>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+    <form th:action="@{/equipment}" th:object="${form}" method="post" class="card stack">
+        <label><span th:text="#{equipment.form.category}">Категория</span>
+            <select th:field="*{categoryId}" required>
+                <option value="" th:text="#{equipment.form.selectCategory}">Выберите категорию</option>
+                <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Категория</option>
+            </select>
+            <span class="field-error" th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}">Выберите категорию.</span>
+        </label>
+        <label><span th:text="#{equipment.form.name}">Название</span> <input th:field="*{name}" required>
+            <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Введите название оборудования.</span>
+        </label>
+        <label><span th:text="#{equipment.form.manufacturer}">Производитель</span> <input th:field="*{manufacturer}"></label>
+        <label><span th:text="#{equipment.form.model}">Модель</span> <input th:field="*{model}"></label>
+        <label><span th:text="#{equipment.form.description}">Описание</span> <textarea th:field="*{description}"></textarea></label>
+        <label><span th:text="#{equipment.form.trackingMode}">Тип учета</span>
+            <select th:field="*{trackingMode}">
+                <option th:each="mode : ${trackingModes}" th:value="${mode}" th:text="${#messages.msg('enum.TrackingMode.' + mode.name())}">Количественный учет</option>
+            </select>
+            <span class="field-error" th:if="${#fields.hasErrors('trackingMode')}" th:errors="*{trackingMode}">Выберите тип учета.</span>
+        </label>
+        <label><span th:text="#{equipment.form.totalQuantity}">Общее количество</span> <input type="number" min="0" th:field="*{totalQuantity}">
+            <span class="field-error" th:if="${#fields.hasErrors('totalQuantity')}" th:errors="*{totalQuantity}">Общее количество не должно быть отрицательным.</span>
+        </label>
+        <button type="submit" th:text="#{equipment.form.submit}">Создать оборудование</button>
+    </form>
+</main>
+</body>
+</html>

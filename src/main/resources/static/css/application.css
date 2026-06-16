@@ -1,0 +1,422 @@
+:root {
+    --accent: #60a5fa;
+    --accent-strong: #2563eb;
+    --accent-stronger: #1d4ed8;
+    --bg: #0f172a;
+    --bg-elevated: #111c32;
+    --bg-muted: #1e293b;
+    --border: #334155;
+    --danger: #dc2626;
+    --danger-strong: #b91c1c;
+    --danger-surface: #3f1d24;
+    --danger-text: #fecaca;
+    --focus-ring: rgb(96 165 250 / 42%);
+    --link: #93c5fd;
+    --shadow: 0 18px 48px rgb(0 0 0 / 28%);
+    --success-surface: #143323;
+    --success-text: #bbf7d0;
+    --surface: #162033;
+    --surface-hover: #1e2b44;
+    --text: #e5edf8;
+    --text-muted: #94a3b8;
+    --text-strong: #f8fafc;
+    color-scheme: dark;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+    margin: 0;
+    background:
+        radial-gradient(circle at top left, rgb(37 99 235 / 16%), transparent 24rem),
+        var(--bg);
+    color: var(--text);
+}
+
+a {
+    color: var(--link);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--text-strong);
+}
+
+button,
+.button {
+    align-items: center;
+    background: var(--accent-strong);
+    border: 1px solid var(--accent-strong);
+    border-radius: 0.55rem;
+    color: var(--text-strong);
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-weight: 650;
+    gap: 0.35rem;
+    padding: 0.65rem 0.9rem;
+}
+
+button:hover,
+.button:hover {
+    background: var(--accent-stronger);
+    color: var(--text-strong);
+}
+
+button.secondary,
+.button.secondary {
+    background: var(--bg-muted);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+button.secondary:hover,
+.button.secondary:hover {
+    background: var(--surface-hover);
+}
+
+button.danger,
+.button.danger {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+button.danger:hover,
+.button.danger:hover {
+    background: var(--danger-strong);
+}
+
+button.danger.subtle,
+.button.danger.subtle {
+    background: var(--danger-surface);
+    border-color: var(--danger-strong);
+    color: var(--danger-text);
+}
+
+button.danger.subtle:hover,
+.button.danger.subtle:hover {
+    background: var(--danger-strong);
+    color: var(--text-strong);
+}
+
+input,
+select,
+textarea {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 0.45rem;
+    box-sizing: border-box;
+    color: var(--text);
+    font: inherit;
+    padding: 0.55rem 0.65rem;
+    width: 100%;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+.button:focus-visible,
+a:focus-visible {
+    box-shadow: 0 0 0 0.2rem var(--focus-ring);
+    outline: 2px solid transparent;
+}
+
+textarea {
+    min-height: 6rem;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th,
+td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+tbody tr:hover {
+    background: rgb(30 41 59 / 46%);
+}
+
+.page {
+    margin: 0 auto;
+    max-width: 72rem;
+    padding: 2rem 1.5rem 3rem;
+}
+
+.page.narrow {
+    max-width: 44rem;
+}
+
+.topbar {
+    align-items: center;
+    background: rgb(15 23 42 / 88%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 1.25rem;
+    padding: 0.85rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.brand {
+    color: var(--text-strong);
+    font-weight: 750;
+}
+
+.nav {
+    display: flex;
+    flex: 1;
+    gap: 1rem;
+}
+
+.logout {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.page-title {
+    align-items: start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.card,
+.auth-card {
+    background: rgb(22 32 51 / 92%);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    box-shadow: var(--shadow);
+    padding: 1rem;
+}
+
+.auth-card {
+    margin: 8vh auto;
+    max-width: 24rem;
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.grid.two {
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
+.stack {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.stack.compact {
+    gap: 0.35rem;
+}
+
+.booking-line {
+    background: rgb(15 23 42 / 36%);
+    box-shadow: none;
+}
+
+.booking-line-heading,
+.selected-equipment,
+.search-result {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.booking-line-heading h3 {
+    margin: 0;
+}
+
+.booking-line-heading button {
+    flex-shrink: 0;
+}
+
+.search-results {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.search-result-list {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.search-result {
+    background: var(--bg-elevated);
+    border-color: var(--border);
+    color: var(--text);
+    padding: 0.6rem 0.7rem;
+    text-align: left;
+    width: 100%;
+}
+
+.search-result:hover {
+    background: var(--surface-hover);
+}
+
+.filters,
+.inline-form {
+    align-items: end;
+    display: flex;
+    gap: 0.65rem;
+}
+
+.inline-form.wrap {
+    flex-wrap: wrap;
+}
+
+.inline-form input,
+.inline-form select {
+    min-width: 8rem;
+}
+
+.muted {
+    color: var(--text-muted);
+}
+
+.auth-link {
+    margin-bottom: 0;
+}
+
+.field-error {
+    color: var(--danger-text);
+    display: block;
+    font-size: 0.85rem;
+    margin-top: 0.35rem;
+}
+
+.flash,
+.notice {
+    border-radius: 0.55rem;
+    margin: 0.75rem 0;
+    padding: 0.75rem 0.9rem;
+}
+
+.flash.success,
+.notice {
+    background: var(--success-surface);
+    border: 1px solid rgb(34 197 94 / 30%);
+    color: var(--success-text);
+}
+
+.flash.error {
+    background: var(--danger-surface);
+    border: 1px solid rgb(248 113 113 / 30%);
+    color: var(--danger-text);
+}
+
+.pill {
+    background: rgb(14 165 233 / 18%);
+    border-radius: 999px;
+    border: 1px solid rgb(56 189 248 / 28%);
+    color: #bae6fd;
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0.1rem;
+    padding: 0.2rem 0.5rem;
+}
+
+.details {
+    display: grid;
+    gap: 0.4rem 1rem;
+    grid-template-columns: max-content 1fr;
+}
+
+.details dt {
+    color: var(--text-muted);
+}
+
+.empty {
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.calendar-panel {
+    display: grid;
+    gap: 1rem;
+}
+
+.calendar-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.calendar-toolbar h2 {
+    margin: 0;
+    text-align: center;
+    text-transform: capitalize;
+}
+
+.calendar-toolbar p {
+    margin: 0.35rem 0 0;
+    text-align: center;
+}
+
+.calendar-jump {
+    justify-content: center;
+}
+
+.calendar-tiles {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+}
+
+.calendar-tile {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    color: var(--text);
+    display: grid;
+    gap: 0.55rem;
+    min-height: 7rem;
+    padding: 0.85rem;
+}
+
+.calendar-tile:hover {
+    background: var(--surface-hover);
+    color: var(--text-strong);
+}
+
+.calendar-tile.has-bookings {
+    border-color: rgb(96 165 250 / 55%);
+    box-shadow: inset 0 0 0 1px rgb(96 165 250 / 18%);
+}
+
+.calendar-tile-date {
+    color: var(--text-strong);
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.calendar-tile-weekday {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{calendar.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="page">
+    <div class="page-title">
+        <div>
+            <h1 th:text="#{calendar.heading}">Календарь бронирований</h1>
+            <p class="muted" th:text="#{calendar.subtitle}">Выберите день, чтобы открыть подробности бронирований.</p>
+        </div>
+    </div>
+    <section th:replace="~{calendar/partials/grid :: calendarGrid}"></section>
+</main>
+</body>
+</html>

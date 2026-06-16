@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{login.title})}"></head>
+<body>
+<main class="auth-card">
+    <h1 th:text="#{login.heading}">Вход</h1>
+    <p class="muted" th:text="#{login.subtitle}">Используйте учетную запись склада, чтобы продолжить.</p>
+    <p class="flash error" th:if="${param.error}" th:text="#{login.error}">Неверная почта или пароль.</p>
+    <p class="flash success" th:if="${param.logout}" th:text="#{login.logout}">Вы вышли из системы.</p>
+    <p class="flash success" th:if="${message}" th:text="${message}"></p>
+    <form th:action="@{/login}" method="post" class="stack">
+        <label><span th:text="#{login.email}">Почта</span> <input name="username" type="email" autocomplete="username" required autofocus></label>
+        <label><span th:text="#{login.password}">Пароль</span> <input name="password" type="password" autocomplete="current-password" required></label>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button type="submit" th:text="#{login.submit}">Войти</button>
+    </form>
+    <p class="muted auth-link">
+        <span th:text="#{login.noAccount}">Нет аккаунта?</span>
+        <a th:href="@{/register}" th:text="#{login.register}">Зарегистрироваться</a>
+    </p>
+</main>
+</body>
+</html>

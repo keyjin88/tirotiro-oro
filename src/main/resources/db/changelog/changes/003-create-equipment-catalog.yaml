@@ -1,0 +1,218 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-equipment-catalog
+      author: cursor
+      changes:
+        - createTable:
+            tableName: equipment_categories
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: archived
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: equipment_items
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: manufacturer
+                  type: varchar(255)
+              - column:
+                  name: model
+                  type: varchar(255)
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: tracking_mode
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_quantity
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: deleted_at
+                  type: timestamptz
+              - column:
+                  name: deleted_by
+                  type: uuid
+              - column:
+                  name: delete_reason
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: equipment_items
+            baseColumnNames: category_id
+            referencedTableName: equipment_categories
+            referencedColumnNames: id
+            constraintName: fk_equipment_items_category
+        - addForeignKeyConstraint:
+            baseTableName: equipment_items
+            baseColumnNames: deleted_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_equipment_items_deleted_by
+        - sql:
+            sql: alter table equipment_items add constraint chk_equipment_items_tracking_mode check (tracking_mode in ('QUANTITY', 'UNIT'))
+        - sql:
+            sql: alter table equipment_items add constraint chk_equipment_items_total_quantity check (total_quantity >= 0)
+        - createIndex:
+            tableName: equipment_items
+            indexName: idx_equipment_items_category_id
+            columns:
+              - column:
+                  name: category_id
+        - createIndex:
+            tableName: equipment_items
+            indexName: idx_equipment_items_active
+            columns:
+              - column:
+                  name: active
+        - createTable:
+            tableName: equipment_units
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: equipment_item_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: inventory_number
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: serial_number
+                  type: varchar(100)
+              - column:
+                  name: condition
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: text
+              - column:
+                  name: archived
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: deleted_at
+                  type: timestamptz
+              - column:
+                  name: deleted_by
+                  type: uuid
+              - column:
+                  name: delete_reason
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: equipment_units
+            baseColumnNames: equipment_item_id
+            referencedTableName: equipment_items
+            referencedColumnNames: id
+            constraintName: fk_equipment_units_item
+        - addForeignKeyConstraint:
+            baseTableName: equipment_units
+            baseColumnNames: deleted_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_equipment_units_deleted_by
+        - sql:
+            sql: alter table equipment_units add constraint chk_equipment_units_status check (status in ('AVAILABLE', 'MAINTENANCE', 'LOST'))
+        - createIndex:
+            tableName: equipment_units
+            indexName: idx_equipment_units_item_id
+            columns:
+              - column:
+                  name: equipment_item_id
+        - createIndex:
+            tableName: equipment_units
+            indexName: idx_equipment_units_status
+            columns:
+              - column:
+                  name: status
