@@ -48,10 +48,14 @@ import oro.tirotiro.equipmentwarehouse.auth.persistence.RoleCode;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
+import oro.tirotiro.equipmentwarehouse.booking.BookingFilter;
 import oro.tirotiro.equipmentwarehouse.booking.BookingService;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingStatus;
 import oro.tirotiro.equipmentwarehouse.calendar.CalendarService;
 import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 import oro.tirotiro.equipmentwarehouse.config.LocaleConfig;
+import oro.tirotiro.equipmentwarehouse.inventory.CatalogActiveFilter;
+import oro.tirotiro.equipmentwarehouse.inventory.EquipmentCatalogFilter;
 import oro.tirotiro.equipmentwarehouse.inventory.InventoryService;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategory;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
@@ -73,7 +77,7 @@ import oro.tirotiro.equipmentwarehouse.permission.persistence.PermissionReposito
         EquipmentController.class,
         HomeController.class
 })
-@Import({SecurityConfig.class, UiControllerAdvice.class, LocaleConfig.class, EquipmentWarehouseMvcTests.TestConfig.class})
+@Import({SecurityConfig.class, UiControllerAdvice.class, LocaleConfig.class, BookingFilterSupport.class, EquipmentCatalogFilterSupport.class, EquipmentWarehouseMvcTests.TestConfig.class})
 class EquipmentWarehouseMvcTests {
 
     private static final Instant NOW = Instant.parse("2026-06-15T06:00:00Z");
@@ -233,6 +237,11 @@ class EquipmentWarehouseMvcTests {
                 .param("permissionCode", PermissionCode.EQUIPMENT_CREATE.name())
                 .param("action", "grant"))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/users/{id}/delete", userId)
+                .with(user("operator").roles("USER"))
+                .with(csrf()))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -250,6 +259,85 @@ class EquipmentWarehouseMvcTests {
                 .andExpect(redirectedUrl("/admin/users"));
 
         verify(userAdministrationService).grantRole(userId, RoleCode.ADMIN, actor);
+    }
+
+    @Test
+    void adminUserDeleteDelegatesToUserAdministrationService() throws Exception {
+        UUID userId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/admin/users/{id}/delete", userId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users"));
+
+        verify(userAdministrationService).deleteUser(userId, actor);
+    }
+
+    @Test
+    void adminUserDeleteRequiresCsrfToken() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/users/{id}/delete", userId)
+                .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isForbidden());
+
+        verify(userAdministrationService, never()).deleteUser(any(), any());
+    }
+
+    @Test
+    void adminBookingDeleteDelegatesToBookingService() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+
+        mockMvc.perform(post("/admin/bookings/{id}/delete", bookingId)
+                .with(user("admin").roles("ADMIN"))
+                .with(csrf())
+                .param("reason", "duplicate entry"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/bookings"));
+
+        verify(bookingService).deleteBooking(bookingId, "duplicate entry", actor);
+    }
+
+    @Test
+    void adminBookingDeleteRequiresAdminRole() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/bookings/{id}/delete", bookingId)
+                .with(user("operator").roles("USER"))
+                .with(csrf())
+                .param("reason", "cleanup"))
+                .andExpect(status().isForbidden());
+
+        verify(bookingService, never()).deleteBooking(any(), any(), any());
+    }
+
+    @Test
+    void adminBookingDeleteRequiresCsrfToken() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/bookings/{id}/delete", bookingId)
+                .with(user("admin").roles("ADMIN"))
+                .param("reason", "cleanup"))
+                .andExpect(status().isForbidden());
+
+        verify(bookingService, never()).deleteBooking(any(), any(), any());
+    }
+
+    @Test
+    void adminEquipmentDeleteRequiresCsrfToken() throws Exception {
+        UUID itemId = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/equipment/{id}/delete", itemId)
+                .with(user("admin").roles("ADMIN"))
+                .param("reason", "broken"))
+                .andExpect(status().isForbidden());
+
+        verify(inventoryService, never()).softDeleteItem(any(), any(), any());
     }
 
     @Test
@@ -278,13 +366,37 @@ class EquipmentWarehouseMvcTests {
 
     @Test
     void catalogPageRendersEquipmentTable() throws Exception {
+        User actor = actor();
         EquipmentItem item = item("Camera", TrackingMode.QUANTITY, 3);
-        when(inventoryService.findActiveCatalog()).thenReturn(List.of(item));
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(inventoryService.findCatalog(eq(EquipmentCatalogFilter.EMPTY), eq(actor))).thenReturn(List.of(item));
+        when(categoryRepository.findAll()).thenReturn(List.of(category("Production")));
 
         mockMvc.perform(get("/equipment").with(user("viewer").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Каталог оборудования")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Camera")));
+    }
+
+    @Test
+    void catalogPageRendersFilterPanelAndAppliesFilters() throws Exception {
+        User actor = actor();
+        UUID categoryId = UUID.randomUUID();
+        EquipmentCatalogFilter filter = EquipmentCatalogFilter.of("Lens", categoryId, TrackingMode.UNIT, CatalogActiveFilter.ACTIVE);
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(inventoryService.findCatalog(eq(filter), eq(actor))).thenReturn(List.of());
+        when(categoryRepository.findAll()).thenReturn(List.of(category("Production")));
+
+        mockMvc.perform(get("/equipment")
+                .with(user("viewer").roles("USER"))
+                .param("search", "Lens")
+                .param("categoryId", categoryId.toString())
+                .param("trackingMode", TrackingMode.UNIT.name()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Все категории")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Применить")));
+
+        verify(inventoryService).findCatalog(eq(filter), eq(actor));
     }
 
     @Test
@@ -484,6 +596,7 @@ class EquipmentWarehouseMvcTests {
     @Test
     void calendarPartialRendersSelectedMonthTilesAndBookingCounts() throws Exception {
         YearMonth month = YearMonth.parse("2026-06");
+        User actor = actor();
         CalendarService.MonthCalendar view = new CalendarService.MonthCalendar(
                 month,
                 month.minusMonths(1),
@@ -491,7 +604,9 @@ class EquipmentWarehouseMvcTests {
                 month.atDay(1),
                 month.atEndOfMonth(),
                 List.of(new CalendarService.CalendarDay(LocalDate.parse("2026-06-15"), "пн", 2)));
-        when(calendarService.monthCalendar(month)).thenReturn(view);
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(calendarService.monthCalendar(eq(month), eq(actor), eq(BookingFilter.EMPTY))).thenReturn(view);
+        when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of());
 
         mockMvc.perform(get("/calendar/partial")
                 .with(user("viewer").roles("USER"))
@@ -499,6 +614,24 @@ class EquipmentWarehouseMvcTests {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Бронирований: 2")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/calendar/day/2026-06-15")));
+    }
+
+    @Test
+    void bookingsListRendersFilterPanelAndAppliesStatusFilter() throws Exception {
+        User actor = actor();
+        when(currentUserService.requireCurrentUser()).thenReturn(actor);
+        when(bookingService.findBookings(eq(actor), eq(BookingFilter.of(BookingStatus.BOOKED, null, null, null, null))))
+                .thenReturn(List.of());
+        when(itemRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of());
+
+        mockMvc.perform(get("/bookings")
+                .with(user("viewer").roles("USER"))
+                .param("status", "BOOKED"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Все статусы")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Применить")));
+
+        verify(bookingService).findBookings(eq(actor), eq(BookingFilter.of(BookingStatus.BOOKED, null, null, null, null)));
     }
 
     private EquipmentCategory category(String name) {

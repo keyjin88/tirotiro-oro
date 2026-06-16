@@ -27,4 +27,14 @@ public class UiControllerAdvice {
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("EQUIPMENT_CREATE"));
     }
+
+    @ModelAttribute("isAdmin")
+    boolean isAdmin(Authentication authentication) {
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals("ROLE_ADMIN"));
+    }
 }

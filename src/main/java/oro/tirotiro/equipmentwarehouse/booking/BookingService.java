@@ -2,6 +2,8 @@ package oro.tirotiro.equipmentwarehouse.booking;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -12,6 +14,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +24,10 @@ import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.Booking;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingLine;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingRepository;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingSearchCriteria;
+import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingSpecifications;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingStatus;
+import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItemRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentUnit;
@@ -38,6 +44,7 @@ public class BookingService {
     private final PermissionService permissionService;
     private final AuditService auditService;
     private final Clock clock;
+    private final ZoneId zoneId;
 
     public BookingService(
             BookingRepository bookingRepository,
@@ -46,7 +53,8 @@ public class BookingService {
             AvailabilityService availabilityService,
             PermissionService permissionService,
             AuditService auditService,
-            Clock clock) {
+            Clock clock,
+            AppProperties appProperties) {
         this.bookingRepository = bookingRepository;
         this.itemRepository = itemRepository;
         this.unitRepository = unitRepository;
@@ -54,14 +62,81 @@ public class BookingService {
         this.permissionService = permissionService;
         this.auditService = auditService;
         this.clock = clock;
+        this.zoneId = appProperties.timeZone();
     }
 
     @Transactional(readOnly = true)
     public List<Booking> visibleBookings(User actor) {
-        if (permissionService.isAdmin(actor)) {
-            return bookingRepository.findAllByOrderByStartsAtDesc();
+        return findBookings(actor, BookingFilter.EMPTY);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Booking> findBookings(User actor, BookingFilter filter) {
+        BookingFilter resolved = resolveFilter(filter, actor);
+        return bookingRepository.findAll(
+                BookingSpecifications.fromCriteria(toSearchCriteria(resolved)),
+                Sort.by(Sort.Direction.DESC, "startsAt"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Booking> findOverlappingBookings(
+            User actor,
+            BookingFilter filter,
+            Instant overlapStart,
+            Instant overlapEnd) {
+        BookingFilter resolved = resolveFilter(filter, actor);
+        Instant rangeStart = overlapStart;
+        Instant rangeEnd = overlapEnd;
+        if (resolved.fromDate() != null) {
+            Instant from = resolved.fromDate().atStartOfDay(zoneId).toInstant();
+            if (from.isAfter(rangeStart)) {
+                rangeStart = from;
+            }
         }
-        return bookingRepository.findByUser_IdOrderByStartsAtDesc(actor.getId());
+        if (resolved.toDate() != null) {
+            Instant to = resolved.toDate().plusDays(1).atStartOfDay(zoneId).toInstant();
+            if (to.isBefore(rangeEnd)) {
+                rangeEnd = to;
+            }
+        }
+        BookingSearchCriteria criteria = new BookingSearchCriteria(
+                resolved.userId(),
+                resolved.status(),
+                rangeStart,
+                rangeEnd,
+                resolved.equipmentItemId());
+        return bookingRepository.findAll(
+                BookingSpecifications.fromCriteria(criteria),
+                Sort.by(Sort.Direction.ASC, "startsAt"));
+    }
+
+    private BookingFilter resolveFilter(BookingFilter filter, User actor) {
+        if (permissionService.isAdmin(actor)) {
+            return filter;
+        }
+        return BookingFilter.of(
+                filter.status(),
+                actor.getId(),
+                filter.fromDate(),
+                filter.toDate(),
+                filter.equipmentItemId());
+    }
+
+    private Instant toRangeStart(LocalDate date) {
+        return date == null ? null : date.atStartOfDay(zoneId).toInstant();
+    }
+
+    private Instant toRangeEnd(LocalDate date) {
+        return date == null ? null : date.plusDays(1).atStartOfDay(zoneId).toInstant();
+    }
+
+    private BookingSearchCriteria toSearchCriteria(BookingFilter filter) {
+        return new BookingSearchCriteria(
+                filter.userId(),
+                filter.status(),
+                toRangeStart(filter.fromDate()),
+                toRangeEnd(filter.toDate()),
+                filter.equipmentItemId());
     }
 
     @Transactional
@@ -152,6 +227,37 @@ public class BookingService {
         auditService.record(actor, admin ? "BOOKING_ADMIN_CANCELLED" : "BOOKING_CANCELLED", "BOOKING", booking.getId(),
                 Map.of("reason", reason == null ? "" : reason));
         return booking;
+    }
+
+    @Transactional
+    public void deleteBooking(UUID bookingId, String reason, User actor) {
+        if (!permissionService.isAdmin(actor)) {
+            throw new AccessDeniedException("Удалять бронирования могут только администраторы");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Администратор должен указать причину удаления");
+        }
+
+        hardDeleteBooking(requireBooking(bookingId), actor, reason);
+    }
+
+    @Transactional
+    public void deleteAllBookingsForUser(UUID userId, User actor) {
+        String reason = "Удаление учётной записи пользователя";
+        for (Booking booking : bookingRepository.findByUser_IdOrderByStartsAtDesc(userId)) {
+            hardDeleteBooking(booking, actor, reason);
+        }
+    }
+
+    private void hardDeleteBooking(Booking booking, User actor, String reason) {
+        auditService.record(actor, "BOOKING_DELETED", "BOOKING", booking.getId(), Map.of(
+                "reason", reason.trim(),
+                "startsAt", booking.getStartsAt().toString(),
+                "endsAt", booking.getEndsAt().toString(),
+                "status", booking.getStatus().name(),
+                "userId", booking.getUser().getId().toString(),
+                "lineCount", booking.getLines().size()));
+        bookingRepository.delete(booking);
     }
 
     private Booking requireBooking(UUID bookingId) {

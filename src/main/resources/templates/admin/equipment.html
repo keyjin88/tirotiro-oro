@@ -66,17 +66,22 @@
                         <button type="submit" th:text="#{admin.equipment.addUnit}">Добавить единицу</button>
                     </form>
                 </td>
-                <td>
-                    <form th:if="${item.active}" th:action="@{/admin/equipment/{id}/delete(id=${item.id})}" method="post" class="inline-form">
-                        <input name="reason" th:placeholder="#{admin.equipment.reason}" required>
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                        <button type="submit" class="danger" th:text="#{admin.equipment.archive}">Архивировать</button>
-                    </form>
+                <td class="actions">
+                    <button th:if="${item.active}"
+                            type="button"
+                            class="danger subtle btn-sm"
+                            data-reason-dialog
+                            th:data-action="@{/admin/equipment/{id}/delete(id=${item.id})}"
+                            th:data-title="#{admin.equipment.dialog.archive.title}"
+                            th:data-message="${#messages.msg('confirm.admin.equipment.delete', item.name)}"
+                            data-reason-required="true"
+                            th:text="#{admin.equipment.archive}">Архивировать</button>
                 </td>
             </tr>
             </tbody>
         </table>
     </section>
+    <div th:replace="~{fragments/reason-dialog :: reasonDialog}"></div>
 </main>
 </body>
 </html>

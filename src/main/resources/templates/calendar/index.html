@@ -10,6 +10,7 @@
             <p class="muted" th:text="#{calendar.subtitle}">Выберите день, чтобы открыть подробности бронирований.</p>
         </div>
     </div>
+    <section th:replace="~{bookings/partials/filters :: bookingFilters}"></section>
     <section th:replace="~{calendar/partials/grid :: calendarGrid}"></section>
 </main>
 </body>

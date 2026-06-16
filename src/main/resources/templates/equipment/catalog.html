@@ -12,7 +12,13 @@
         </div>
         <a class="button" th:if="${canCreateEquipment}" th:href="@{/equipment/new}" th:text="#{equipment.catalog.add}">Добавить оборудование</a>
     </div>
-    <button class="secondary" hx-get="/equipment/table" hx-target="#equipment-table" hx-swap="outerHTML" th:text="#{equipment.catalog.refresh}">Обновить таблицу</button>
+    <section th:replace="~{equipment/partials/filters :: equipmentFilters}"></section>
+    <button class="secondary"
+            hx-get="/equipment/table"
+            hx-target="#equipment-table"
+            hx-swap="outerHTML"
+            hx-include=".filters.wrap"
+            th:text="#{equipment.catalog.refresh}">Обновить таблицу</button>
     <section th:replace="~{equipment/partials/table :: equipmentTable}"></section>
 </main>
 </body>

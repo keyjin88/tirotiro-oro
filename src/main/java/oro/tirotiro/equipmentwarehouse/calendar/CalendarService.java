@@ -1,6 +1,7 @@
 package oro.tirotiro.equipmentwarehouse.calendar;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -9,40 +10,41 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import oro.tirotiro.equipmentwarehouse.config.AppProperties;
+import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
+import oro.tirotiro.equipmentwarehouse.booking.BookingFilter;
+import oro.tirotiro.equipmentwarehouse.booking.BookingService;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.Booking;
-import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingRepository;
-import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingStatus;
+import oro.tirotiro.equipmentwarehouse.config.AppProperties;
 
 @Service
 public class CalendarService {
 
-    private final BookingRepository bookingRepository;
+    private final BookingService bookingService;
     private final Clock clock;
     private final ZoneId zoneId;
 
     public CalendarService(
-            BookingRepository bookingRepository,
+            BookingService bookingService,
             Clock clock,
             AppProperties appProperties) {
-        this.bookingRepository = bookingRepository;
+        this.bookingService = bookingService;
         this.clock = clock;
         this.zoneId = appProperties.timeZone();
     }
 
     @Transactional(readOnly = true)
-    public MonthCalendar monthCalendar(YearMonth month) {
+    public MonthCalendar monthCalendar(YearMonth month, User actor, BookingFilter filter) {
         YearMonth selectedMonth = month == null ? YearMonth.now(clock.withZone(zoneId)) : month;
         LocalDate firstDay = selectedMonth.atDay(1);
         LocalDate lastDay = selectedMonth.atEndOfMonth();
-        List<Booking> bookings = bookingsOverlapping(firstDay, lastDay.plusDays(1));
+        List<Booking> bookings = bookingsOverlapping(firstDay, lastDay.plusDays(1), actor, filter);
         Map<LocalDate, Integer> bookingCountByDate = bookingCountsByDate(firstDay, lastDay, bookings);
 
         List<CalendarDay> days = firstDay.datesUntil(lastDay.plusDays(1))
@@ -61,19 +63,22 @@ public class CalendarService {
     }
 
     @Transactional(readOnly = true)
-    public DayCalendar dayCalendar(LocalDate date) {
+    public DayCalendar dayCalendar(LocalDate date, User actor, BookingFilter filter) {
         LocalDate selectedDate = date == null ? LocalDate.now(clock.withZone(zoneId)) : date;
-        List<BookingSummary> bookings = bookingsOverlapping(selectedDate, selectedDate.plusDays(1)).stream()
+        List<BookingSummary> bookings = bookingsOverlapping(selectedDate, selectedDate.plusDays(1), actor, filter).stream()
                 .map(this::toBookingSummary)
                 .toList();
-        return new DayCalendar(selectedDate, YearMonth.from(selectedDate), bookings);
+        return new DayCalendar(selectedDate, YearMonth.from(selectedDate), bookings, filter);
     }
 
-    private List<Booking> bookingsOverlapping(LocalDate startsOn, LocalDate endsOn) {
-        return bookingRepository.findByStatusAndStartsAtLessThanAndEndsAtGreaterThanOrderByStartsAtAsc(
-                BookingStatus.BOOKED,
-                endsOn.atStartOfDay(zoneId).toInstant(),
-                startsOn.atStartOfDay(zoneId).toInstant());
+    private List<Booking> bookingsOverlapping(
+            LocalDate startsOn,
+            LocalDate endsOn,
+            User actor,
+            BookingFilter filter) {
+        Instant overlapStart = startsOn.atStartOfDay(zoneId).toInstant();
+        Instant overlapEnd = endsOn.atStartOfDay(zoneId).toInstant();
+        return bookingService.findOverlappingBookings(actor, filter, overlapStart, overlapEnd);
     }
 
     private Map<LocalDate, Integer> bookingCountsByDate(LocalDate firstDay, LocalDate lastDay, List<Booking> bookings) {
@@ -126,7 +131,7 @@ public class CalendarService {
         }
     }
 
-    public record DayCalendar(LocalDate date, YearMonth month, List<BookingSummary> bookings) {
+    public record DayCalendar(LocalDate date, YearMonth month, List<BookingSummary> bookings, BookingFilter filter) {
     }
 
     public record BookingSummary(

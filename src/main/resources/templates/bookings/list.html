@@ -12,6 +12,7 @@
         </div>
         <a class="button" th:href="@{/bookings/new}" th:text="#{bookings.new}">Новое бронирование</a>
     </div>
+    <section th:replace="~{bookings/partials/filters :: bookingFilters}"></section>
     <section th:replace="~{bookings/partials/table :: bookingsTable}"></section>
 </main>
 </body>

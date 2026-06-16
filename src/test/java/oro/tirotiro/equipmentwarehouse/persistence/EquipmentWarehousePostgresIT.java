@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import oro.tirotiro.equipmentwarehouse.auth.persistence.User;
 import oro.tirotiro.equipmentwarehouse.auth.persistence.UserRepository;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityException;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
+import oro.tirotiro.equipmentwarehouse.booking.BookingFilter;
 import oro.tirotiro.equipmentwarehouse.booking.BookingService;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.Booking;
 import oro.tirotiro.equipmentwarehouse.booking.persistence.BookingRepository;
@@ -84,6 +86,25 @@ class EquipmentWarehousePostgresIT {
 
     @Autowired
     private AvailabilityService availabilityService;
+
+    @Test
+    void findFilteredBookingsWithNoOptionalFiltersWorksOnPostgres() {
+        User actor = adminUser();
+        EquipmentCategory category = categoryRepository.save(new EquipmentCategory("Booking Filters", "Filter tests"));
+        EquipmentItem item = itemRepository.save(new EquipmentItem(category, "Filter Camera", TrackingMode.QUANTITY, 1));
+        EquipmentItem otherItem = itemRepository.save(new EquipmentItem(category, "Other Camera", TrackingMode.QUANTITY, 1));
+
+        bookingService.createBooking(command(item, START, END, "filter test booking"), actor);
+        bookingService.createBooking(command(otherItem, START, END, "other booking"), actor);
+
+        assertThat(bookingService.findBookings(actor, BookingFilter.EMPTY))
+                .extracting(Booking::getComment)
+                .contains("filter test booking", "other booking");
+
+        assertThat(bookingService.findBookings(actor, BookingFilter.of(null, null, null, null, item.getId())))
+                .extracting(Booking::getComment)
+                .containsExactly("filter test booking");
+    }
 
     @Test
     void liquibaseSchemaSupportsBookingOverlapRejectionAndCancellation() {
@@ -179,9 +200,12 @@ class EquipmentWarehousePostgresIT {
     }
 
     private User adminUser() {
-        User user = new User("admin@example.com", "{noop}secret", "Admin");
-        user.getRoles().add(roleRepository.findByCode(RoleCode.ADMIN).orElseThrow());
-        return userRepository.saveAndFlush(user);
+        return userRepository.findByEmailIgnoreCase("admin@example.com")
+                .orElseGet(() -> {
+                    User user = new User("admin@example.com", "{noop}secret", "Admin");
+                    user.getRoles().add(roleRepository.findByCode(RoleCode.ADMIN).orElseThrow());
+                    return userRepository.saveAndFlush(user);
+                });
     }
 
     private void assertSearchFinds(String query, EquipmentItem expectedItem) {

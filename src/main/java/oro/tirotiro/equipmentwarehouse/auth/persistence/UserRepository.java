@@ -30,4 +30,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @EntityGraph(attributePaths = {"roles", "permissionGrants", "permissionGrants.permission"})
     @Query("select user from User user order by user.email")
     java.util.List<User> findAllWithRolesAndPermissions();
+
+    java.util.List<User> findAllByOrderByDisplayNameAsc();
 }

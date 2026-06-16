@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<body>
+<section th:fragment="equipmentFilters" class="card filters-panel">
+    <form class="filters wrap"
+          method="get"
+          th:action="@{/equipment}"
+          th:attr="hx-get=@{/equipment/table}, hx-target='#equipment-table', hx-swap='outerHTML'">
+        <label>
+            <span th:text="#{equipment.filter.search}">Поиск</span>
+            <input type="search" name="search" th:value="${equipmentFilter.search}">
+        </label>
+        <label>
+            <span th:text="#{equipment.filter.category}">Категория</span>
+            <select name="categoryId">
+                <option value="" th:selected="${equipmentFilter.categoryId == null}" th:text="#{equipment.filter.categoryAll}">Все категории</option>
+                <option th:each="category : ${filterCategories}"
+                        th:value="${category.id}"
+                        th:selected="${equipmentFilter.categoryId != null and equipmentFilter.categoryId.equals(category.id)}"
+                        th:text="${category.name}">Категория</option>
+            </select>
+        </label>
+        <label>
+            <span th:text="#{equipment.filter.trackingMode}">Тип учета</span>
+            <select name="trackingMode">
+                <option value="" th:selected="${equipmentFilter.trackingMode == null}" th:text="#{equipment.filter.trackingModeAll}">Все типы учета</option>
+                <option th:each="mode : ${filterTrackingModes}"
+                        th:value="${mode.name()}"
+                        th:selected="${equipmentFilter.trackingMode == mode}"
+                        th:text="#{'enum.TrackingMode.' + ${mode.name()}}">Тип учета</option>
+            </select>
+        </label>
+        <label sec:authorize="hasRole('ADMIN')">
+            <span th:text="#{equipment.filter.active}">Статус</span>
+            <select name="activeFilter">
+                <option th:each="option : ${filterActiveOptions}"
+                        th:value="${option.name()}"
+                        th:selected="${equipmentFilter.activeFilter == option}"
+                        th:text="#{'enum.CatalogActiveFilter.' + ${option.name()}}">Статус</option>
+            </select>
+        </label>
+        <button type="submit" th:text="#{equipment.filter.apply}">Применить</button>
+        <a class="button secondary" th:href="@{/equipment}" th:text="#{equipment.filter.reset}">Сбросить</a>
+    </form>
+</section>
+</body>
+</html>

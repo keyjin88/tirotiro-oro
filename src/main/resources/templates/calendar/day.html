@@ -6,7 +6,9 @@
 <main class="page">
     <div class="page-title">
         <div>
-            <a class="muted" th:href="@{/calendar(month=${day.month})}" th:text="#{calendar.backToMonth}">Назад к месяцу</a>
+            <a class="muted"
+               th:href="@{/calendar(month=${day.month}, status=${day.filter.status}, userId=${day.filter.userId}, fromDate=${day.filter.fromDate}, toDate=${day.filter.toDate}, equipmentItemId=${day.filter.equipmentItemId})}"
+               th:text="#{calendar.backToMonth}">Назад к месяцу</a>
             <h1 th:text="#{calendar.day.heading(${#temporals.format(day.date, 'dd.MM.yyyy')})}">Бронирования на день</h1>
             <p class="muted" th:text="#{calendar.day.subtitle}">Подробная информация по бронированиям выбранного дня.</p>
         </div>

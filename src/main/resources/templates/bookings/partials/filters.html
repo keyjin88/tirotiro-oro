@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru" xmlns:th="https://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<body>
+<section th:fragment="bookingFilters" class="card filters-panel">
+    <form class="filters wrap"
+          method="get"
+          th:action="${filterCalendarContext} ? @{/calendar/partial} : @{/bookings}"
+          th:attr="hx-get=${filterCalendarContext} ? @{/calendar/partial} : @{/bookings/table}, hx-target=${filterCalendarContext} ? '#calendar-grid' : '#bookings-table', hx-swap='outerHTML'">
+        <label th:if="${filterCalendarContext}">
+            <span th:text="#{calendar.jumpToMonth}">Перейти к месяцу</span>
+            <input type="month" name="month" th:value="${filterMonth}" required>
+        </label>
+        <label>
+            <span th:text="#{bookings.filter.status}">Статус</span>
+            <select name="status">
+                <option value="" th:selected="${bookingFilter.status == null}" th:text="#{bookings.filter.statusAll}">Все статусы</option>
+                <option th:each="bookingStatus : ${filterStatuses}"
+                        th:value="${bookingStatus.name()}"
+                        th:selected="${bookingFilter.status == bookingStatus}"
+                        th:text="#{'enum.BookingStatus.' + ${bookingStatus.name()}}">Статус</option>
+            </select>
+        </label>
+        <label sec:authorize="hasRole('ADMIN')">
+            <span th:text="#{bookings.filter.user}">Пользователь</span>
+            <select name="userId">
+                <option value="" th:selected="${bookingFilter.userId == null}" th:text="#{bookings.filter.userAll}">Все пользователи</option>
+                <option th:each="user : ${filterUsers}"
+                        th:value="${user.id}"
+                        th:selected="${bookingFilter.userId != null and bookingFilter.userId.equals(user.id)}"
+                        th:text="${user.displayName}">Пользователь</option>
+            </select>
+        </label>
+        <label>
+            <span th:text="#{bookings.filter.fromDate}">С</span>
+            <input type="date" name="fromDate" th:value="${bookingFilter.fromDate}">
+        </label>
+        <label>
+            <span th:text="#{bookings.filter.toDate}">По</span>
+            <input type="date" name="toDate" th:value="${bookingFilter.toDate}">
+        </label>
+        <label>
+            <span th:text="#{bookings.filter.equipment}">Оборудование</span>
+            <select name="equipmentItemId">
+                <option value="" th:selected="${bookingFilter.equipmentItemId == null}" th:text="#{bookings.filter.equipmentAll}">Всё оборудование</option>
+                <option th:each="item : ${filterEquipment}"
+                        th:value="${item.id}"
+                        th:selected="${bookingFilter.equipmentItemId != null and bookingFilter.equipmentItemId.equals(item.id)}"
+                        th:text="${item.name}">Оборудование</option>
+            </select>
+        </label>
+        <button type="submit" th:text="#{bookings.filter.apply}">Применить</button>
+        <a class="button secondary"
+           th:href="${filterCalendarContext} ? @{/calendar} : @{/bookings}"
+           th:text="#{bookings.filter.reset}">Сбросить</a>
+    </form>
+</section>
+</body>
+</html>

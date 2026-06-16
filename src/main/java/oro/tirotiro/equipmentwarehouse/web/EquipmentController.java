@@ -19,6 +19,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import oro.tirotiro.equipmentwarehouse.auth.CurrentUserService;
 import oro.tirotiro.equipmentwarehouse.booking.AvailabilityService;
+import oro.tirotiro.equipmentwarehouse.inventory.CatalogActiveFilter;
+import oro.tirotiro.equipmentwarehouse.inventory.EquipmentCatalogFilter;
 import oro.tirotiro.equipmentwarehouse.inventory.InventoryService;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentCategoryRepository;
 import oro.tirotiro.equipmentwarehouse.inventory.persistence.EquipmentItem;
@@ -36,6 +38,7 @@ public class EquipmentController {
     private final EquipmentCategoryRepository categoryRepository;
     private final EquipmentItemRepository itemRepository;
     private final EquipmentUnitRepository unitRepository;
+    private final EquipmentCatalogFilterSupport equipmentCatalogFilterSupport;
 
     public EquipmentController(
             InventoryService inventoryService,
@@ -43,24 +46,38 @@ public class EquipmentController {
             CurrentUserService currentUserService,
             EquipmentCategoryRepository categoryRepository,
             EquipmentItemRepository itemRepository,
-            EquipmentUnitRepository unitRepository) {
+            EquipmentUnitRepository unitRepository,
+            EquipmentCatalogFilterSupport equipmentCatalogFilterSupport) {
         this.inventoryService = inventoryService;
         this.availabilityService = availabilityService;
         this.currentUserService = currentUserService;
         this.categoryRepository = categoryRepository;
         this.itemRepository = itemRepository;
         this.unitRepository = unitRepository;
+        this.equipmentCatalogFilterSupport = equipmentCatalogFilterSupport;
     }
 
     @GetMapping
-    public String catalog(Model model) {
-        model.addAttribute("items", inventoryService.findActiveCatalog());
+    public String catalog(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) TrackingMode trackingMode,
+            @RequestParam(required = false) CatalogActiveFilter activeFilter,
+            Model model) {
+        EquipmentCatalogFilter filter = equipmentCatalogFilterSupport.parse(search, categoryId, trackingMode, activeFilter);
+        addCatalog(model, filter);
         return "equipment/catalog";
     }
 
     @GetMapping("/table")
-    public String catalogTable(Model model) {
-        model.addAttribute("items", inventoryService.findActiveCatalog());
+    public String catalogTable(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) TrackingMode trackingMode,
+            @RequestParam(required = false) CatalogActiveFilter activeFilter,
+            Model model) {
+        EquipmentCatalogFilter filter = equipmentCatalogFilterSupport.parse(search, categoryId, trackingMode, activeFilter);
+        addCatalog(model, filter);
         return "equipment/partials/table :: equipmentTable";
     }
 
@@ -126,6 +143,12 @@ public class EquipmentController {
                 .findFirst()
                 .orElse(null));
         return "equipment/partials/availability :: availabilitySummary";
+    }
+
+    private void addCatalog(Model model, EquipmentCatalogFilter filter) {
+        var actor = currentUserService.requireCurrentUser();
+        model.addAttribute("items", inventoryService.findCatalog(filter, actor));
+        equipmentCatalogFilterSupport.addFilterModel(model, actor, filter);
     }
 
     private void addCreateModel(Model model, EquipmentForm form) {
